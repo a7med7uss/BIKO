@@ -308,13 +308,25 @@ async function handleGoogleFile(doc, token) {
 
   let permissionId = null;
   if ($("drive-share-consent").checked) {
-    const permission = await googleDriveRequest(
+    const existingPermissions = await googleDriveRequest(
       "https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) +
-        "/permissions?supportsAllDrives=true&fields=id,type,role",
-      token,
-      { method: "POST", body: { type: "anyone", role: "reader", allowFileDiscovery: false } }
+        "/permissions?supportsAllDrives=true&pageSize=100&fields=permissions(id,type,role)",
+      token
     );
-    permissionId = permission.id || null;
+    const existingAnyone = (existingPermissions.permissions || []).find((permission) =>
+      permission.type === "anyone" && permission.role === "reader"
+    );
+    if (existingAnyone) {
+      permissionId = existingAnyone.id || null;
+    } else {
+      const permission = await googleDriveRequest(
+        "https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) +
+          "/permissions?supportsAllDrives=true&fields=id,type,role",
+        token,
+        { method: "POST", body: { type: "anyone", role: "reader", allowFileDiscovery: false } }
+      );
+      permissionId = permission.id || null;
+    }
   }
 
   const finalMetadata = await googleDriveRequest(
@@ -351,7 +363,7 @@ async function openGooglePicker() {
     const config = await ensureGooglePicker();
     const token = await getGoogleAccessToken(config);
     const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-      .setMimeTypes("video/*")
+      .setMimeTypes("video/mp4,video/webm,video/quicktime,video/x-matroska,video/x-msvideo,video/mpeg,video/3gpp")
       .setIncludeFolders(false);
     const picker = new google.picker.PickerBuilder()
       .addView(view)
