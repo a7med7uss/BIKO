@@ -34,6 +34,8 @@ let suppressDriveEventsUntil = 0;
 let driveAccessToken = null;
 let googleTokenClient = null;
 let pickerReadyPromise = null;
+let googleConfig = null;
+let googleConfigError = null;
 
 function getClientId() {
   const key = "biko-client-id";
@@ -185,7 +187,7 @@ async function ensureGooglePicker() {
     const response = await fetch("/api/google-drive-config", { cache: "no-store" });
     const config = await response.json().catch(() => ({}));
     if (!response.ok || !config.enabled || !config.clientId || !config.apiKey || !config.appId) {
-      throw new Error("ربط Google Drive لم يتم تفعيله من إدارة BIKO بعد. لا تحتاج لإعداد أي مفاتيح بنفسك.");
+      throw new Error("ميزة Google Drive تنتظر تفعيل التطبيق مرة واحدة من إدارة BIKO. لا تحتاج لإعداد أي مفاتيح بنفسك.");
     }
     await Promise.all([
       loadScript("https://apis.google.com/js/api.js", "biko-gapi"),
@@ -195,12 +197,25 @@ async function ensureGooglePicker() {
       if (window.google?.picker) return resolve();
       window.gapi.load("picker", { callback: resolve, onerror: () => reject(new Error("تعذر تحميل Google Picker.")) });
     });
+    googleConfig = config;
     return config;
   })().catch((error) => {
+    googleConfigError = error;
     pickerReadyPromise = null;
     throw error;
   });
   return pickerReadyPromise;
+}
+
+// Prepare the public app credentials and Google's UI libraries before the user clicks.
+// This keeps the OAuth consent popup inside the user's original click gesture.
+if (drivePickerButton) {
+  drivePickerButton.disabled = true;
+  ensureGooglePicker().then(() => {
+    drivePickerButton.disabled = false;
+  }).catch(() => {
+    drivePickerButton.disabled = false;
+  });
 }
 
 function getGoogleAccessToken(config) {
@@ -321,45 +336,49 @@ async function handleGoogleFile(doc, token) {
     }
   }
 }
-async function openGooglePicker() {
+function openGooglePicker() {
   if (drivePickerButton.disabled) return;
   drivePickerButton.disabled = true;
   drivePickerButton.classList.add("loading");
   homeMessage("");
-  try {
-    const config = await ensureGooglePicker();
-    const token = await getGoogleAccessToken(config);
+
+  if (!googleConfig) {
+    drivePickerButton.disabled = false;
+    drivePickerButton.classList.remove("loading");
+    homeMessage(googleConfigError?.message || "ميزة Google Drive غير مفعّلة حاليًا. لا تحتاج لإدخال أي بيانات بنفسك.");
+    return;
+  }
+
+  // requestAccessToken is invoked synchronously in the click handler so Google can open its consent popup.
+  getGoogleAccessToken(googleConfig).then((token) => {
     const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
       .setMimeTypes("video/mp4,video/webm,video/quicktime,video/x-matroska,video/x-msvideo,video/mpeg,video/3gpp")
       .setIncludeFolders(false);
     const picker = new google.picker.PickerBuilder()
       .addView(view)
       .setOAuthToken(token)
-      .setDeveloperKey(config.apiKey)
-      .setAppId(config.appId)
+      .setDeveloperKey(googleConfig.apiKey)
+      .setAppId(googleConfig.appId)
       .setCallback(async (data) => {
-        if (data[google.picker.Response.ACTION] !== google.picker.Action.PICKED) return;
-        try {
-          const docs = data[google.picker.Response.DOCUMENTS] || [];
-          if (!docs.length) return;
-          drivePickerButton.disabled = true;
-          await handleGoogleFile(docs[0], token);
-        } catch (error) {
-          homeMessage(error.message || "تعذر تجهيز فيديو Drive.");
-        } finally {
-          drivePickerButton.disabled = false;
-          drivePickerButton.classList.remove("loading");
+        if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
+          try {
+            const docs = data[google.picker.Response.DOCUMENTS] || [];
+            if (docs.length) await handleGoogleFile(docs[0], token);
+          } catch (error) {
+            homeMessage(error.message || "تعذر تجهيز فيديو Drive.");
+          }
         }
+        drivePickerButton.disabled = false;
+        drivePickerButton.classList.remove("loading");
       })
       .setTitle("اختر فيديو لمشاهدته مع المجموعة")
       .build();
     picker.setVisible(true);
-  } catch (error) {
+  }).catch((error) => {
     homeMessage(error.message || "تعذر فتح Google Picker.");
-  } finally {
     drivePickerButton.disabled = false;
     drivePickerButton.classList.remove("loading");
-  }
+  });
 }
 drivePickerButton?.addEventListener("click", openGooglePicker);
 
