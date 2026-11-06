@@ -183,10 +183,12 @@ async function createRoom(payload) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "تعذر إنشاء الغرفة.");
     location.href = "/room/" + encodeURIComponent(data.roomId);
+    return true;
   } catch (error) {
     homeMessage(error.message || "حدث خطأ أثناء إنشاء الغرفة.");
     createButton.disabled = false;
     createButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+    return false;
   }
 }
 
@@ -307,6 +309,7 @@ async function handleGoogleFile(doc, token) {
   }
 
   let permissionId = null;
+  let permissionCreated = false;
   if ($("drive-share-consent").checked) {
     const existingPermissions = await googleDriveRequest(
       "https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) +
@@ -326,6 +329,7 @@ async function handleGoogleFile(doc, token) {
         { method: "POST", body: { type: "anyone", role: "reader", allowFileDiscovery: false } }
       );
       permissionId = permission.id || null;
+      permissionCreated = Boolean(permissionId);
     }
   }
 
@@ -341,7 +345,7 @@ async function handleGoogleFile(doc, token) {
     throw new Error("Google لم يُرجع رابط تشغيل مباشر متوافقًا للملف.");
   }
 
-  await createRoom({
+  const roomCreated = await createRoom({
     provider: "gdrive",
     mediaId: fileId,
     fileName: finalMetadata.name || doc.name || "Google Drive video",
@@ -352,6 +356,18 @@ async function handleGoogleFile(doc, token) {
     permissionId,
     shareMode: permissionId ? "anyone-reader" : "pre-shared"
   });
+  if (!roomCreated && permissionCreated && permissionId) {
+    try {
+      await googleDriveRequest(
+        "https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) +
+          "/permissions/" + encodeURIComponent(permissionId) + "?supportsAllDrives=true",
+        token,
+        { method: "DELETE" }
+      );
+    } catch (_) {
+      homeMessage("تعذر إنشاء الغرفة وتمت إضافة مشاركة عامة للملف. راجع إعدادات مشاركة الملف في Google Drive وألغِ الرابط العام يدويًا.");
+    }
+  }
 }
 
 async function openGooglePicker() {
