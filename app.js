@@ -92,10 +92,12 @@ function setRole(nextRole) {
     pill.textContent = role === "host" ? "أنت المضيف" : "مشاهد";
     pill.classList.toggle("host", role === "host");
   }
-  if (controls) controls.hidden = role !== "host";
+  if (controls) controls.hidden = role !== "host" || playerProvider === "voe";
   if (hint) hint.textContent = playerProvider === "gdrive"
     ? (role === "host" ? "أنت تتحكم في تشغيل الفيديو وتقديمه وإيقافه للمجموعة." : "تحكم المشاهدة للمضيف فقط. يمكنك ضبط مستوى الصوت محليًا.")
-    : (role === "host" ? "أنت تتحكم في مشاهدة المجموعة." : "المضيف فقط يتحكم في المشاهدة. الترجمة والصوت من إعدادات CinemaOS.");
+    : playerProvider === "voe"
+      ? "مشغل VOE لا يعلن واجهة تحكم خارجية موثقة؛ كل عضو يشغّل المقطع من داخل المشغّل بنفسه."
+      : (role === "host" ? "أنت تتحكم في مشاهدة المجموعة." : "المضيف فقط يتحكم في المشاهدة. الترجمة والصوت من إعدادات CinemaOS.");
   if (driveVideo && playerProvider === "gdrive") driveVideo.controls = role === "host";
 }
 
@@ -127,6 +129,43 @@ function parseCinemaUrl(value) {
   return { mediaId, mediaType, season, episode, sourceUrl: url.toString() };
 }
 
+function parseMediaInput(value) {
+  const raw = String(value || "").trim();
+  const iframeMatch = raw.match(/<iframe\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/i);
+  const candidate = iframeMatch ? iframeMatch[1].trim() : raw;
+  let url;
+  try { url = new URL(candidate); }
+  catch (_) { throw new Error("الصق رابط مشغّل صحيحًا أو كود iframe كاملًا."); }
+
+  if (["cinemaos.tech", "www.cinemaos.tech"].includes(url.hostname)) {
+    return { provider: "cinemaos", ...parseCinemaUrl(url.toString()) };
+  }
+
+  const voeHosts = ["voe.sx", "www.voe.sx", "shannoncoldalready.com", "www.shannoncoldalready.com"];
+  if (url.protocol !== "https:" || !voeHosts.includes(url.hostname.toLowerCase())) {
+    throw new Error("المصادر المدعومة حاليًا: CinemaOS وVOE.");
+  }
+
+  const parts = url.pathname.split("/").filter(Boolean);
+  let code = "";
+  if (parts.length === 2 && parts[0].toLowerCase() === "e") code = parts[1];
+  else if (parts.length === 1) code = parts[0];
+  if (!/^[a-z0-9]{8,20}$/i.test(code)) {
+    throw new Error("رابط VOE غير مكتمل. استخدم رابطًا مثل https://voe.sx/e/wwxgipn1bxwc");
+  }
+
+  url.pathname = "/e/" + code;
+  url.hash = "";
+  return {
+    provider: "voe",
+    mediaId: code,
+    playerUrl: url.toString(),
+    mediaUrl: url.toString(),
+    sourceUrl: candidate,
+    fileName: "فيديو من VOE"
+  };
+}
+
 async function createRoom(payload) {
   createButton.disabled = true;
   createButton.innerHTML = '<span class="spinner"></span>';
@@ -153,8 +192,8 @@ if (createForm) {
   createForm.addEventListener("submit", (event) => {
     event.preventDefault();
     try {
-      const media = parseCinemaUrl(cinemaInput.value);
-      createRoom({ provider: "cinemaos", ...media });
+      const media = parseMediaInput(cinemaInput.value);
+      createRoom(media);
     } catch (error) {
       homeMessage(error.message);
     }
@@ -459,7 +498,9 @@ function handleRoomMessage(message) {
 function updatePlaybackLabel() {
   const el = $("playback-status");
   if (!el || !playback) return;
-  el.textContent = playback.isPlaying ? "المشاهدة مستمرة" : "متوقف مؤقتًا";
+  el.textContent = playerProvider === "voe"
+    ? "تحكم محلي داخل VOE"
+    : (playback.isPlaying ? "المشاهدة مستمرة" : "متوقف مؤقتًا");
 }
 
 function postPlayerCommand(command, value) {
@@ -497,7 +538,7 @@ function applyDrivePlayback(item, force) {
 }
 
 function applyPlayback(item, force) {
-  if (!item || role === "host") return;
+  if (!item || role === "host" || playerProvider === "voe") return;
   if (playerProvider === "gdrive") {
     applyDrivePlayback(item, force);
     return;
@@ -625,7 +666,18 @@ async function loadRoom() {
     currentMedia = data.room || data;
     const media = currentMedia;
 
-    if (media.provider === "gdrive") {
+    if (media.provider === "voe") {
+      playerProvider = "voe";
+      playerFrame.hidden = false;
+      driveVideo.hidden = true;
+      $("local-media-controls").hidden = true;
+      $("room-title").textContent = media.fileName || "فيديو من VOE";
+      $("room-subtitle").textContent = "VOE · التشغيل من داخل مشغّل الفيديو";
+      $("player-status")?.remove();
+      playerReady = false;
+      playerFrame.src = media.playerUrl || media.mediaUrl;
+      playerFrame.addEventListener("load", () => { playerReady = true; }, { once: true });
+    } else if (media.provider === "gdrive") {
       playerProvider = "gdrive";
       playerFrame.hidden = true;
       driveVideo.hidden = false;
@@ -670,6 +722,10 @@ async function loadRoom() {
 function hostAction(action) {
   if (role !== "host") {
     toast("التحكم متاح للمضيف فقط.");
+    return;
+  }
+  if (playerProvider === "voe") {
+    toast("مشغل VOE لا يوفّر تحكمًا خارجيًا موثقًا؛ استخدم عناصر التحكم داخل الفيديو.");
     return;
   }
   if (playerProvider === "gdrive") {
