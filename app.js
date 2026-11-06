@@ -472,7 +472,7 @@ function hostAction(action) {
     postPlayerCommand("seek", next);
     publishHostEvent("seek", next, localPlaying);
   } else if (action === "toggle") {
-    const nextAction = localPlaying === false ? "play" : "pause";
+    const nextAction = localPlaying === true ? "pause" : "play";
     postPlayerCommand(nextAction);
     publishHostEvent(nextAction, localTime, nextAction === "play");
   }
