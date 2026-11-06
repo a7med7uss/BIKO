@@ -308,6 +308,17 @@ async function handleGoogleFile(doc, token) {
     throw new Error("مالك الملف لا يسمح بتنزيله أو تشغيله عبر تطبيق خارجي.");
   }
 
+  const finalMetadata = await googleDriveRequest(
+    "https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) +
+      "?fields=id,name,mimeType,size,webContentLink,webViewLink&supportsAllDrives=true",
+    token
+  );
+  const mediaUrl = finalMetadata.webContentLink ||
+    ("https://drive.google.com/uc?export=download&id=" + encodeURIComponent(fileId));
+  if (!/^https:\/\/(drive\.google\.com|drive\.usercontent\.google\.com|[\w.-]+\.googleusercontent\.com)\//i.test(mediaUrl)) {
+    throw new Error("Google لم يُرجع رابط تشغيل مباشر متوافقًا للملف.");
+  }
+
   let permissionId = null;
   let permissionCreated = false;
   if ($("drive-share-consent").checked) {
@@ -331,18 +342,6 @@ async function handleGoogleFile(doc, token) {
       permissionId = permission.id || null;
       permissionCreated = Boolean(permissionId);
     }
-  }
-
-  const finalMetadata = await googleDriveRequest(
-    "https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) +
-      "?fields=id,name,mimeType,size,webContentLink,webViewLink&supportsAllDrives=true",
-    token
-  );
-  const mediaUrl = finalMetadata.webContentLink ||
-    ("https://drive.google.com/uc?export=download&id=" + encodeURIComponent(fileId));
-
-  if (!/^https:\/\/(drive\.google\.com|drive\.usercontent\.google\.com|drive\.usercontent\.google\.com|[\w.-]+\.googleusercontent\.com)\//i.test(mediaUrl)) {
-    throw new Error("Google لم يُرجع رابط تشغيل مباشر متوافقًا للملف.");
   }
 
   const roomCreated = await createRoom({
@@ -369,7 +368,6 @@ async function handleGoogleFile(doc, token) {
     }
   }
 }
-
 async function openGooglePicker() {
   if (drivePickerButton.disabled) return;
   drivePickerButton.disabled = true;
