@@ -1,6 +1,5 @@
 const SYNC_API = (window.BIKO_SYNC_API || "https://biko.qeshta.workers.dev").replace(/\/$/, "");
 const CINEMAOS_ORIGIN = "https://cinemaos.tech";
-const GOOGLE_CONFIG_KEY = "biko-google-picker-config-v1";
 const $ = (id) => document.getElementById(id);
 
 const home = $("home");
@@ -12,8 +11,6 @@ const homeError = $("home-error");
 const browseToggle = $("browse-toggle");
 const browsePanel = $("browse-panel");
 const drivePickerButton = $("drive-picker-button");
-const driveSettingsToggle = $("drive-settings-toggle");
-const driveSettingsPanel = $("drive-settings-panel");
 const driveVideo = $("drive-video");
 const playerFrame = $("player-frame");
 
@@ -65,48 +62,6 @@ function homeMessage(message) {
   homeError.textContent = message || "";
 }
 
-function driveConfig() {
-  try {
-    return JSON.parse(localStorage.getItem(GOOGLE_CONFIG_KEY) || "{}");
-  } catch (_) {
-    return {};
-  }
-}
-
-function loadSavedDriveConfig() {
-  const config = driveConfig();
-  $("google-client-id").value = config.clientId || "";
-  $("google-api-key").value = config.apiKey || "";
-  $("google-app-id").value = config.appId || "";
-  $("drive-config-status").textContent = config.clientId && config.apiKey && config.appId
-    ? "إعدادات Google Drive محفوظة على هذا الجهاز."
-    : "أدخل بيانات مشروع Google Cloud لتفعيل اختيار الملفات.";
-}
-
-function saveDriveConfig() {
-  const clientIdValue = $("google-client-id").value.trim();
-  const apiKeyValue = $("google-api-key").value.trim();
-  const appIdValue = $("google-app-id").value.trim();
-  if (!clientIdValue.endsWith(".apps.googleusercontent.com") || apiKeyValue.length < 20 || !/^\d{6,}$/.test(appIdValue)) {
-    $("drive-config-status").textContent = "تأكد من Client ID وAPI Key ورقم مشروع Google Cloud.";
-    return;
-  }
-  const config = { clientId: clientIdValue, apiKey: apiKeyValue, appId: appIdValue };
-  localStorage.setItem(GOOGLE_CONFIG_KEY, JSON.stringify(config));
-  $("drive-config-status").textContent = "تم حفظ الإعدادات محليًا. اضغط اختيار فيديو من Google Drive.";
-  toast("تم حفظ إعدادات Google Drive.");
-}
-
-if (driveSettingsToggle) {
-  driveSettingsToggle.addEventListener("click", () => {
-    const opening = driveSettingsPanel.hidden;
-    driveSettingsPanel.hidden = !opening;
-    driveSettingsToggle.setAttribute("aria-expanded", String(opening));
-    if (opening) driveSettingsPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  });
-}
-$("save-drive-config")?.addEventListener("click", saveDriveConfig);
-loadSavedDriveConfig();
 
 if (browseToggle && browsePanel) {
   browseToggle.addEventListener("click", () => {
@@ -227,12 +182,10 @@ function loadScript(src, id) {
 async function ensureGooglePicker() {
   if (pickerReadyPromise) return pickerReadyPromise;
   pickerReadyPromise = (async () => {
-    const config = driveConfig();
-    if (!config.clientId || !config.apiKey || !config.appId) {
-      driveSettingsPanel.hidden = false;
-      driveSettingsToggle.setAttribute("aria-expanded", "true");
-      driveSettingsPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      throw new Error("أكمل إعداد Google Drive أولًا من زر إعداد Google Drive.");
+    const response = await fetch("/api/google-drive-config", { cache: "no-store" });
+    const config = await response.json().catch(() => ({}));
+    if (!response.ok || !config.enabled || !config.clientId || !config.apiKey || !config.appId) {
+      throw new Error("ربط Google Drive لم يتم تفعيله من إدارة BIKO بعد. لا تحتاج لإعداد أي مفاتيح بنفسك.");
     }
     await Promise.all([
       loadScript("https://apis.google.com/js/api.js", "biko-gapi"),
