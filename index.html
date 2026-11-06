@@ -59,9 +59,8 @@
       <div class="drive-actions">
         <button id="drive-picker-button" class="drive-button" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8l5 8-5 8H8l-5-8 5-8Z"/><path d="M8 4l5 8-5 8M16 4l-3 8 3 8"/></svg>
-          اختيار فيديو من Google Drive
+          ربط Google Drive واختيار فيديو
         </button>
-        <button id="drive-settings-toggle" class="drive-settings-button" type="button" aria-expanded="false">إعداد Google Drive</button>
       </div>
 
       <label class="share-consent">
@@ -70,31 +69,9 @@
       </label>
       <p class="drive-privacy-note">لن يتم تغيير خصوصية الملف إلا عند تفعيل هذا الاختيار قبل اختيار الفيديو. من دون تفعيله، يجب أن يكون الملف مشاركًا مسبقًا مع جميع المشاهدين.</p>
 
-      <section id="drive-settings-panel" class="drive-settings-panel" hidden>
-        <div class="settings-heading">
-          <strong>ربط Google Drive</strong>
-          <span>إعداد مرة واحدة على جهاز المضيف.</span>
-        </div>
-        <label>OAuth Client ID
-          <input id="google-client-id" type="text" autocomplete="off" placeholder="xxxxx.apps.googleusercontent.com" dir="ltr">
-        </label>
-        <label>Google API Key
-          <input id="google-api-key" type="text" autocomplete="off" placeholder="AIza..." dir="ltr">
-        </label>
-        <label>Google Cloud Project Number
-          <input id="google-app-id" type="text" inputmode="numeric" autocomplete="off" placeholder="123456789012" dir="ltr">
-        </label>
-        <div class="settings-help">
-          فعّل Google Picker API وGoogle Drive API، وأنشئ OAuth Client من نوع Web application وAPI Key. أضف هذا النطاق إلى Authorized JavaScript origins:
-          <bdi>https://biko-watch-party.vercel.app</bdi>
-          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">فتح Google Cloud Credentials ↗</a>
-          <a href="https://developers.google.com/workspace/drive/picker/guides/web-picker" target="_blank" rel="noopener noreferrer">دليل Google Picker الرسمي ↗</a>
-        </div>
-        <button id="save-drive-config" class="save-settings-button" type="button">حفظ إعدادات Drive على هذا الجهاز</button>
-        <p id="drive-config-status" class="drive-config-status" role="status"></p>
-      </section>
+>
     </div>
-    <footer class="home-footer">احمد حسين عمارة</footer>
+    <footer class="home-footer">احمد حسين عمارة · <a href="/privacy.html">سياسة الخصوصية</a></footer>
   </main>
 
   <main id="room-page" class="room-page" hidden>
