@@ -1,61 +1,36 @@
 # BIKO — Watch together
 
-BIKO is a lightweight watch-party web app. Each participant loads the video in their own browser. BIKO sends room state and playback commands only; it does not relay video bytes.
+BIKO is a lightweight watch-party web app. Each participant loads the video in their own browser. BIKO sends room state and supported playback commands only; it does not relay video bytes.
 
-## Features
+## Providers
 
-- CinemaOS movie and TV player links.
-- CinemaOS library opens in a separate tab because the catalogue page does not reliably allow framing. The official CinemaOS player endpoint is embedded in BIKO.
-- Google Drive video selection through the official Google Picker.
-- Host-only synchronized play, pause, seek, and late-join position.
-- Drive playback uses the browser's native HTML5 video element.
-- Each viewer controls their own Drive playback volume.
-- Room state and membership are backed by the existing Cloudflare Durable Object worker.
+- **CinemaOS**: movies and TV player links. The library opens in a separate tab; the player itself is embedded.
+- **VOE**: paste a VOE embed URL such as `https://voe.sx/e/wwxgipn1bxwc`, a supported `shannoncoldalready.com/e/{code}` URL, or the iframe HTML containing that URL. BIKO validates the URL and embeds the provider's player.
+- **Google Drive**: select a video through Google Picker after the site owner configures the BIKO Google OAuth application.
 
-## Google Drive: one-time site-owner setup
+## Synchronization notes
 
-Regular BIKO users do **not** enter Google Cloud credentials. Once the BIKO owner has configured the Google application, a user presses **ربط Google Drive واختيار فيديو**, chooses a Google account, approves the requested file access, and selects a video.
+- Host-only synchronization is implemented for providers whose embedded player can be controlled through a documented interface or native HTML5 video.
+- Google Drive uses the native HTML5 video element, so BIKO can synchronize play, pause, seek and late joining.
+- CinemaOS uses its documented cross-origin player messaging where available.
+- The VOE public documentation found for this integration does not document a parent-page API for reading playback time or issuing play/pause/seek commands. VOE rooms therefore embed and play the VOE iframe, but playback is controlled locally inside the VOE player and is not synchronized by BIKO. BIKO deliberately does not guess undocumented postMessage commands, proxy media, extract stream URLs, or interfere with the provider's advertising.
+- VOE's terms require that embedded content not have its advertising blocked or visually/technically altered, and that the user possess the necessary content rights. VOE describes its service as intended for adults and notes that advertising may be adult-oriented. Review the provider's terms before use.
 
-The Vercel project uses these server-side environment variables:
+## Google Drive setup
 
-- `GOOGLE_DRIVE_CLIENT_ID`: OAuth 2.0 Web client ID.
-- `GOOGLE_DRIVE_API_KEY`: API key restricted to the BIKO origin and Google Picker/Drive APIs.
-- `GOOGLE_DRIVE_APP_ID`: the numeric Google Cloud project number.
+Regular BIKO users do not enter Google Cloud credentials. The BIKO site owner configures the application's Google credentials on the Vercel project once. A user then connects their own account, approves the requested access and selects a video.
 
-Enable Google Picker API and Google Drive API in the same Cloud project. The OAuth consent configuration must use the narrow `drive.file` scope. Add `https://biko-watch-party.vercel.app` as an authorized JavaScript origin. These settings are managed by the site owner in Vercel, not by each user.
+Environment variables:
+- `GOOGLE_DRIVE_CLIENT_ID`
+- `GOOGLE_DRIVE_API_KEY`
+- `GOOGLE_DRIVE_APP_ID`
 
-Official setup guide: https://developers.google.com/workspace/drive/picker/guides/web-picker.
-
-## Drive sharing and privacy
-
-- BIKO requests the `drive.file` scope: access to files the user chooses through Google Picker, rather than broad access to all Drive files.
-- The Google access token stays in browser memory and is not written to BIKO storage.
-- If the owner already shared the file with every viewer, leave the public-link checkbox off.
-- If viewers need access, the host can explicitly tick the consent box before choosing a file. BIKO adds an `anyone: reader` permission to that file through the Drive API.
-- Anyone who obtains that file link can then view it. This permission remains after the BIKO room ends until the owner revokes it in Google Drive.
-- BIKO does not silently change sharing permissions.
-- See `/privacy.html` for the user-facing privacy notice.
-
-## CinemaOS
-
-Movie player URLs:
-
-`https://cinemaos.tech/player/{tmdb_id}`
-
-TV episode URLs:
-
-`https://cinemaos.tech/player/{tmdb_id}/{season}/{episode}`
-
-Open CinemaOS in a separate tab, open the title's player page, then paste the player URL into BIKO.
+Enable Google Picker API and Google Drive API. Use the narrow `drive.file` OAuth scope and authorize the production origin `https://biko-watch-party.vercel.app`.
 
 ## Local development
 
-Serve the repository root with any static HTTP server. The app uses the existing sync worker by default:
-
-`https://biko.qeshta.workers.dev`
-
-To use a different sync API, set `window.BIKO_SYNC_API` before loading `app.js`.
+Serve the repository root with any static HTTP server. The app uses the existing sync worker by default: `https://biko.qeshta.workers.dev`.
 
 ## Deployment
 
-The repository is configured for a static Vercel deployment. The `/room/{roomId}` rewrite serves the app shell for direct room links.
+The repository is configured for a static Vercel deployment. `/room/{roomId}` rewrites to the app entry page.
