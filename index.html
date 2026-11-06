@@ -20,9 +20,9 @@
       <p class="tagline">نفس اللقطة، نفس اللحظة — مهما كانت المسافة.</p>
 
       <form id="create-form" class="url-form">
-        <label class="sr-only" for="cinema-url">رابط مشغل CinemaOS</label>
-        <input id="cinema-url" type="url" inputmode="url" autocomplete="url"
-          placeholder="https://cinemaos.tech/player/550" required>
+        <label class="sr-only" for="cinema-url">رابط مشغل الفيديو</label>
+        <input id="cinema-url" type="text" inputmode="url" autocomplete="url"
+          placeholder="CinemaOS أو https://voe.sx/e/wwxgipn1bxwc أو كود iframe" required>
         <button id="create-btn" class="create-button" type="submit" aria-label="إنشاء غرفة مشاهدة" title="إنشاء غرفة">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         </button>
@@ -53,7 +53,7 @@
           </div>
           <a class="primary-link" href="https://cinemaos.tech/" target="_blank" rel="noopener noreferrer">تصفح الأفلام</a>
         </div>
-        <p class="browse-help">بعد اختيار الفيلم اضغط Watch Movie، وانسخ رابط المشغّل الذي يبدأ بـ <bdi>https://cinemaos.tech/player/</bdi> ثم ارجع والصقه في الحقل بالأعلى.</p>
+        <p class="browse-help">بعد اختيار الفيلم اضغط Watch Movie، وانسخ رابط المشغّل الذي يبدأ بـ <bdi>https://cinemaos.tech/player/</bdi> ثم ارجع والصقه في الحقل بالأعلى. يمكنك أيضًا لصق رابط VOE أو كود iframe كامل.</p>
       </section>
 
       <div class="drive-actions">
@@ -97,7 +97,7 @@
       </div>
 
       <div id="player-stage" class="player-stage">
-        <iframe id="player-frame" title="مشغل CinemaOS"
+        <iframe id="player-frame" title="مشغل الفيديو"
           allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
           allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
         <video id="drive-video" playsinline preload="metadata" hidden></video>
