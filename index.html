@@ -41,19 +41,58 @@
         <div class="browse-toolbar">
           <div>
             <strong>مكتبة CinemaOS</strong>
-            <span>اختار الفيلم، ثم الصق رابط صفحة المشغل في BIKO.</span>
+            <span>افتح المكتبة في تبويب مستقل، ثم انسخ رابط المشغّل إلى BIKO.</span>
           </div>
-          <a class="open-cinema" href="https://cinemaos.tech/" target="_blank" rel="noopener noreferrer">فتح في تبويب مستقل ↗</a>
+          <a class="open-cinema" href="https://cinemaos.tech/" target="_blank" rel="noopener noreferrer">فتح CinemaOS ↗</a>
         </div>
-        <div class="browser-frame-wrap">
-          <iframe id="browse-frame" title="تصفح CinemaOS" src="about:blank"
-            referrerpolicy="strict-origin-when-cross-origin"
-            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"></iframe>
+        <div class="browse-open-card">
+          <div class="browse-open-icon" aria-hidden="true">↗</div>
+          <div>
+            <strong>التصفح داخل الإطار غير متاح من CinemaOS</strong>
+            <p>صفحة المكتبة تمنع عرضها داخل بعض المواقع. افتحها في تبويب مستقل؛ تضمين مشغّل الفيلم نفسه يظل مدعومًا.</p>
+          </div>
+          <a class="primary-link" href="https://cinemaos.tech/" target="_blank" rel="noopener noreferrer">تصفح الأفلام</a>
         </div>
-        <p class="browse-help">لو اختيار الفيلم لم يرسل رابطًا تلقائيًا إلى BIKO، افتح CinemaOS في تبويب مستقل، وانسخ رابط المشغل الذي يبدأ بـ <bdi>cinemaos.tech/player/</bdi> ثم الصقه في الحقل بالأعلى.</p>
+        <p class="browse-help">بعد اختيار الفيلم اضغط Watch Movie، وانسخ رابط المشغّل الذي يبدأ بـ <bdi>https://cinemaos.tech/player/</bdi> ثم ارجع والصقه في الحقل بالأعلى.</p>
       </section>
 
-      <p class="home-note">المضيف يتحكم في التشغيل والتوقف والتقديم، وكل عضو يختار الترجمة والصوت محليًا.</p>
+      <div class="drive-actions">
+        <button id="drive-picker-button" class="drive-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8l5 8-5 8H8l-5-8 5-8Z"/><path d="M8 4l5 8-5 8M16 4l-3 8 3 8"/></svg>
+          اختيار فيديو من Google Drive
+        </button>
+        <button id="drive-settings-toggle" class="drive-settings-button" type="button" aria-expanded="false">إعداد Google Drive</button>
+      </div>
+
+      <label class="share-consent">
+        <input id="drive-share-consent" type="checkbox">
+        <span>أسمح بمشاركة الفيديو المحدد مع أي شخص يملك رابط الغرفة (صلاحية مشاهدة فقط).</span>
+      </label>
+      <p class="drive-privacy-note">لن يتم تغيير خصوصية الملف إلا عند تفعيل هذا الاختيار قبل اختيار الفيديو. من دون تفعيله، يجب أن يكون الملف مشاركًا مسبقًا مع جميع المشاهدين.</p>
+
+      <section id="drive-settings-panel" class="drive-settings-panel" hidden>
+        <div class="settings-heading">
+          <strong>ربط Google Drive</strong>
+          <span>إعداد مرة واحدة على جهاز المضيف.</span>
+        </div>
+        <label>OAuth Client ID
+          <input id="google-client-id" type="text" autocomplete="off" placeholder="xxxxx.apps.googleusercontent.com" dir="ltr">
+        </label>
+        <label>Google API Key
+          <input id="google-api-key" type="text" autocomplete="off" placeholder="AIza..." dir="ltr">
+        </label>
+        <label>Google Cloud Project Number
+          <input id="google-app-id" type="text" inputmode="numeric" autocomplete="off" placeholder="123456789012" dir="ltr">
+        </label>
+        <div class="settings-help">
+          فعّل Google Picker API وGoogle Drive API، وأنشئ OAuth Client من نوع Web application وAPI Key. أضف هذا النطاق إلى Authorized JavaScript origins:
+          <bdi>https://biko-watch-party.vercel.app</bdi>
+          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">فتح Google Cloud Credentials ↗</a>
+          <a href="https://developers.google.com/workspace/drive/picker/guides/web-picker" target="_blank" rel="noopener noreferrer">دليل Google Picker الرسمي ↗</a>
+        </div>
+        <button id="save-drive-config" class="save-settings-button" type="button">حفظ إعدادات Drive على هذا الجهاز</button>
+        <p id="drive-config-status" class="drive-config-status" role="status"></p>
+      </section>
     </div>
     <footer class="home-footer">احمد حسين عمارة</footer>
   </main>
@@ -74,7 +113,7 @@
       <div class="player-heading">
         <div>
           <h1 id="room-title">غرفة مشاهدة</h1>
-          <p id="room-subtitle">يتم تجهيز مشغل CinemaOS...</p>
+          <p id="room-subtitle">يتم تجهيز المشغل...</p>
         </div>
         <button id="fullscreen-button" class="icon-button" type="button" aria-label="ملء الشاشة" title="ملء الشاشة">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg>
@@ -85,7 +124,15 @@
         <iframe id="player-frame" title="مشغل CinemaOS"
           allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
           allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        <video id="drive-video" playsinline preload="metadata" hidden></video>
+        <button id="drive-start" class="drive-start" type="button" hidden>اضغط لبدء المشاهدة والمزامنة</button>
         <div id="player-error" class="player-error" hidden></div>
+      </div>
+
+      <div id="local-media-controls" class="local-media-controls" hidden>
+        <label for="local-volume">مستوى الصوت</label>
+        <input id="local-volume" type="range" min="0" max="1" step="0.05" value="1">
+        <button id="local-mute" class="secondary-button" type="button">كتم الصوت</button>
       </div>
 
       <div class="sync-bar">
@@ -94,7 +141,7 @@
           <button class="control-button control-play" type="button" data-action="toggle">تشغيل / إيقاف</button>
           <button class="control-button" type="button" data-action="seek-forward" aria-label="تقديم 10 ثوان">+10</button>
         </div>
-        <p id="sync-hint" class="sync-hint">تحكم المشاهدة للمضيف فقط. الترجمة والصوت يظلان بإعدادات كل عضو.</p>
+        <p id="sync-hint" class="sync-hint">المضيف يتحكم في المشاهدة.</p>
         <span id="playback-status" class="playback-status">في انتظار المشغل</span>
       </div>
     </section>
