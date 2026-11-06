@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#090b10">
+  <meta name="description" content="BIKO — نفس اللقطة، نفس اللحظة، مهما كانت المسافة.">
+  <title>BIKO — Watch together</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main id="home" class="home-page">
+    <div class="home-glow home-glow-a"></div>
+    <div class="home-glow home-glow-b"></div>
+    <div class="home-content">
+      <a class="brand brand-home" href="/" aria-label="BIKO home">BIKO</a>
+      <p class="tagline">نفس اللقطة، نفس اللحظة — مهما كانت المسافة.</p>
+
+      <form id="create-form" class="url-form">
+        <label class="sr-only" for="cinema-url">رابط مشغل CinemaOS</label>
+        <input id="cinema-url" type="url" inputmode="url" autocomplete="url"
+          placeholder="https://cinemaos.tech/player/550" required>
+        <button id="create-btn" class="create-button" type="submit" aria-label="إنشاء غرفة مشاهدة" title="إنشاء غرفة">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </form>
+      <p id="home-error" class="form-error" role="alert"></p>
+
+      <button id="browse-toggle" class="browse-toggle" type="button" aria-expanded="false">
+        <span class="browse-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M8 11h6M11 8v6"/></svg>
+        </span>
+        <span>تصفح CinemaOS</span>
+        <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+
+      <section id="browse-panel" class="browse-panel" hidden>
+        <div class="browse-toolbar">
+          <div>
+            <strong>مكتبة CinemaOS</strong>
+            <span>اختار الفيلم، ثم الصق رابط صفحة المشغل في BIKO.</span>
+          </div>
+          <a class="open-cinema" href="https://cinemaos.tech/" target="_blank" rel="noopener noreferrer">فتح في تبويب مستقل ↗</a>
+        </div>
+        <div class="browser-frame-wrap">
+          <iframe id="browse-frame" title="تصفح CinemaOS" src="about:blank"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"></iframe>
+        </div>
+        <p class="browse-help">لو اختيار الفيلم لم يرسل رابطًا تلقائيًا إلى BIKO، افتح CinemaOS في تبويب مستقل، وانسخ رابط المشغل الذي يبدأ بـ <bdi>cinemaos.tech/player/</bdi> ثم الصقه في الحقل بالأعلى.</p>
+      </section>
+
+      <p class="home-note">المضيف يتحكم في التشغيل والتوقف والتقديم، وكل عضو يختار الترجمة والصوت محليًا.</p>
+    </div>
+    <footer class="home-footer">احمد حسين عمارة</footer>
+  </main>
+
+  <main id="room-page" class="room-page" hidden>
+    <header class="room-header">
+      <a class="brand brand-small" href="/" aria-label="BIKO home">BIKO</a>
+      <div class="room-header-right">
+        <span id="role-pill" class="role-pill">جارٍ تحديد دورك</span>
+        <span class="connection-pill"><i id="connection-dot" class="connection-dot"></i><span id="connection-label">جارٍ الاتصال</span></span>
+        <span class="members-pill"><span id="member-count">1</span> أعضاء</span>
+        <button id="copy-invite" class="secondary-button" type="button">نسخ الدعوة</button>
+        <a class="home-link" href="/">الرئيسية</a>
+      </div>
+    </header>
+
+    <section class="watch-area">
+      <div class="player-heading">
+        <div>
+          <h1 id="room-title">غرفة مشاهدة</h1>
+          <p id="room-subtitle">يتم تجهيز مشغل CinemaOS...</p>
+        </div>
+        <button id="fullscreen-button" class="icon-button" type="button" aria-label="ملء الشاشة" title="ملء الشاشة">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg>
+        </button>
+      </div>
+
+      <div id="player-stage" class="player-stage">
+        <iframe id="player-frame" title="مشغل CinemaOS"
+          allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+          allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        <div id="player-error" class="player-error" hidden></div>
+      </div>
+
+      <div class="sync-bar">
+        <div class="host-controls" id="host-controls" hidden>
+          <button class="control-button" type="button" data-action="seek-back" aria-label="رجوع 10 ثوان">−10</button>
+          <button class="control-button control-play" type="button" data-action="toggle">تشغيل / إيقاف</button>
+          <button class="control-button" type="button" data-action="seek-forward" aria-label="تقديم 10 ثوان">+10</button>
+        </div>
+        <p id="sync-hint" class="sync-hint">تحكم المشاهدة للمضيف فقط. الترجمة والصوت يظلان بإعدادات كل عضو.</p>
+        <span id="playback-status" class="playback-status">في انتظار المشغل</span>
+      </div>
+    </section>
+    <div id="room-toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
