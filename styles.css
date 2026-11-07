@@ -315,3 +315,98 @@ a { color: inherit; text-decoration: none; }
  .bottom-play-button,.fullscreen-control,.video-volume-group{flex-basis:27px}
 }
 .player-stage:fullscreen .video-controls{padding:22px 26px 18px}
+
+/* Room header — compact status cluster and a distinct invite action */
+.room-header{
+  min-height:60px;
+  padding:2px 0 13px;
+  align-items:center;
+  gap:18px;
+}
+.room-header-right{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  flex-wrap:wrap;
+  gap:10px;
+  max-width:calc(100% - 100px);
+}
+.room-status-group{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:4px;
+  border:1px solid #242d3a;
+  border-radius:15px;
+  background:rgba(16,21,29,.78);
+}
+.role-pill,.connection-pill,.members-pill{
+  min-height:34px;
+  padding:7px 11px;
+  border:1px solid transparent;
+  background:transparent;
+  border-radius:10px;
+  font-size:11px;
+  gap:7px;
+}
+.role-pill.host{
+  background:#192318;
+  border-color:#354a2c;
+}
+.connection-pill{color:#c0c9d5}
+.connection-dot{width:7px;height:7px;flex:0 0 7px}
+.members-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  color:#c4ccd7;
+  font-variant-numeric:tabular-nums;
+}
+.members-pill svg{
+  width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;opacity:.82
+}
+.members-pill>span:first-of-type{font-weight:800;color:var(--green)}
+.members-label{color:#aeb8c6}
+.secondary-button.copy-invite-button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:43px;
+  padding:8px 16px;
+  border:1px solid #4b6338;
+  border-radius:12px;
+  background:#182318;
+  color:#c7f38d;
+  font:700 11px "Cairo",sans-serif;
+  white-space:nowrap;
+  transition:background .15s,border-color .15s,transform .15s;
+}
+.copy-invite-button:hover{
+  background:#22301e;
+  border-color:#83a95b;
+  transform:translateY(-1px);
+}
+.copy-invite-button svg{
+  width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round
+}
+.room-title-wrap{min-height:0}
+.room-title-wrap h1{margin:0;font-size:17px;font-weight:700}
+.room-title-wrap #room-title:empty{display:none}
+@media(max-width:760px){
+  .room-header{align-items:center;gap:8px;padding-bottom:10px}
+  .room-header-right{max-width:calc(100% - 62px);gap:7px}
+  .room-status-group{gap:3px;padding:3px;border-radius:12px}
+  .role-pill,.connection-pill,.members-pill{min-height:31px;padding:6px 7px;font-size:10px}
+  .secondary-button.copy-invite-button{min-height:37px;padding:6px 10px;font-size:10px}
+}
+@media(max-width:470px){
+  .room-header{flex-wrap:wrap;align-items:center;min-height:0}
+  .room-header-right{max-width:none;width:100%;justify-content:space-between;gap:7px}
+  .room-status-group{flex:1;justify-content:space-around;min-width:0}
+  .role-pill,.connection-pill,.members-pill{padding:6px 5px;font-size:9px;gap:5px}
+  .members-pill svg{width:13px;height:13px}
+  .copy-invite-button{flex:0 0 auto}
+}
