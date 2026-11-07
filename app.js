@@ -536,13 +536,11 @@ async function loadRoom() {
     currentMedia = data.room || data;
     if (currentMedia.provider !== "gdrive") throw new Error("هذه الغرفة لا تستخدم Google Drive. أنشئ غرفة جديدة.");
     $("room-title").textContent = currentMedia.fileName || "فيديو من Google Drive";
-    $("room-subtitle").textContent = "Google Drive · بث مباشر ومتزامن";
     driveVideo.src = SYNC_API + "/media/" + encodeURIComponent(roomId);
     hostTicket = await obtainHostTicket(roomId);
     connectRoom(hostTicket);
   } catch (error) {
     $("room-title").textContent = "تعذر فتح الغرفة";
-    $("room-subtitle").textContent = error.message || "حدث خطأ غير متوقع.";
     $("player-error").textContent = error.message || "حدث خطأ غير متوقع.";
     $("player-error").hidden = false;
   }
