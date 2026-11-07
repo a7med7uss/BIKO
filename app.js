@@ -128,12 +128,26 @@ async function checkDriveSession() {
   }
 }
 
-function startGoogleConnect() {
+async function startGoogleConnect() {
   const pending = driveInput?.value.trim();
   if (pending) {
     try { localStorage.setItem(PENDING_KEY, JSON.stringify(parseDriveId(pending))); } catch (_) {}
   }
-  location.href = SYNC_API + "/api/drive/auth/start";
+  homeMessage("");
+  driveAction.disabled = true;
+  try {
+    const response = await fetch(SYNC_API + "/api/drive/auth/status", { cache: "no-store" });
+    const status = await response.json().catch(() => ({}));
+    if (!response.ok || !status.enabled) {
+      homeMessage("ربط Google Drive لم يُفعّل بعد. يحتاج مالك BIKO لإضافة بيانات تطبيق Google مرة واحدة.");
+      driveAction.disabled = false;
+      return;
+    }
+    location.href = SYNC_API + "/api/drive/auth/start";
+  } catch (_) {
+    homeMessage("تعذر الاتصال بخدمة BIKO. حاول مرة أخرى.");
+    driveAction.disabled = false;
+  }
 }
 
 async function loadGooglePicker() {
