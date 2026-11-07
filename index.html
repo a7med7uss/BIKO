@@ -65,33 +65,42 @@
         <div id="video-controls" class="video-controls">
           <div class="video-center-controls">
             <button class="player-icon-button skip-button" type="button" data-action="seek-back" aria-label="رجوع 10 ثوان" title="رجوع 10 ثوان">
-              <span class="skip-glyph">↶</span><span class="skip-seconds">10</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M19 6 9 12l10 6z"/></svg>
             </button>
             <button id="player-play-button" class="player-icon-button player-main-button" type="button" data-action="toggle" aria-label="تشغيل" title="تشغيل">
               <svg class="play-shape" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.8c0-1 1.1-1.6 2-1l11 6.7a1.8 1.8 0 0 1 0 3L9 20.2c-.9.6-2 .0-2-1V4.8Z"/></svg>
               <svg class="pause-shape" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h3.5v16H7zM13.5 4H17v16h-3.5z"/></svg>
             </button>
             <button class="player-icon-button skip-button" type="button" data-action="seek-forward" aria-label="تقديم 10 ثوان" title="تقديم 10 ثوان">
-              <span class="skip-glyph">↷</span><span class="skip-seconds">10</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M5 6l10 6-10 6z"/></svg>
             </button>
           </div>
 
           <div class="video-bottom-controls">
-            <div class="video-progress-row">
-              <span id="video-current-time" class="video-time">0:00</span>
-              <input id="video-seek" class="video-seek" type="range" min="0" max="1000" step="1" value="0" aria-label="موضع الفيديو">
-              <span id="video-duration" class="video-time">0:00</span>
-            </div>
             <div class="video-toolbar">
+              <button id="player-bottom-play" class="toolbar-icon-button bottom-play-button" type="button" data-action="toggle" aria-label="تشغيل" title="تشغيل">
+                <svg class="play-shape" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.8c0-1 1.1-1.6 2-1l11 6.7a1.8 1.8 0 0 1 0 3L9 20.2c-.9.6-2 .0-2-1V4.8Z"/></svg>
+                <svg class="pause-shape" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h3.5v16H7zM13.5 4H17v16h-3.5z"/></svg>
+              </button>
+
+              <input id="video-seek" class="video-seek" type="range" min="0" max="1000" step="1" value="0" aria-label="موضع الفيديو">
+
+              <button id="video-time-display" class="video-time-display" type="button" aria-label="تبديل الوقت الحالي والمتبقي" title="اضغط لعرض الوقت المتبقي">
+                <span id="video-current-time">0:00</span><span class="time-divider">/</span><span id="video-duration">0:00</span>
+              </button>
+
               <div class="video-volume-group">
-                <button id="player-mute-button" class="toolbar-icon-button" type="button" aria-label="كتم الصوت" title="كتم الصوت">
+                <button id="player-mute-button" class="toolbar-icon-button" type="button" aria-label="إظهار مستوى الصوت" title="مستوى الصوت" aria-expanded="false" aria-controls="volume-popover">
                   <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 9a5 5 0 0 1 0 6M18.5 6.5a8.5 8.5 0 0 1 0 11"/></svg>
                   <svg class="volume-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="m17 9 5 6m0-6-5 6"/></svg>
                 </button>
-                <input id="player-volume" class="player-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="مستوى الصوت">
+                <div id="volume-popover" class="volume-popover" hidden>
+                  <span id="volume-value" class="volume-value">100%</span>
+                  <input id="player-volume" class="player-volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="مستوى الصوت" orient="vertical">
+                  <span class="volume-min-max"><span>100</span><span>0</span></span>
+                </div>
               </div>
-              <span class="video-controls-spacer"></span>
-              <span id="video-role-lock" class="video-role-lock" title="المضيف يتحكم في التشغيل">تحكم المضيف</span>
+
               <button id="fullscreen-button" class="toolbar-icon-button fullscreen-control" type="button" aria-label="ملء الشاشة" title="ملء الشاشة">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg>
               </button>
