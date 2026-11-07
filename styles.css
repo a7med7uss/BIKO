@@ -237,3 +237,81 @@ a { color: inherit; text-decoration: none; }
   .video-center-controls{gap:17px}
 }
 .player-stage .video-controls{opacity:1}
+
+
+/* Bottom control rail: left-to-right order is play, seek, time, volume, fullscreen. */
+.video-bottom-controls{width:100%;margin-top:auto}
+.video-toolbar{
+  display:flex;align-items:center;gap:clamp(8px,1.2vw,18px);
+  direction:ltr;width:100%;min-height:42px;margin:0;
+}
+.bottom-play-button{flex:0 0 34px}
+.bottom-play-button svg{width:22px;height:22px;fill:currentColor;stroke:none}
+.bottom-play-button .pause-shape{display:none}
+.bottom-play-button.is-playing .play-shape{display:none}
+.bottom-play-button.is-playing .pause-shape{display:block}
+.video-seek{flex:1 1 auto;min-width:50px;margin:0}
+.video-time-display{
+  flex:0 0 auto;display:flex;align-items:center;gap:5px;white-space:nowrap;
+  padding:5px 3px;border:0;background:transparent;color:#fff;
+  font:500 11px/1.2 "Cairo",sans-serif;font-variant-numeric:tabular-nums;
+  cursor:pointer;text-shadow:0 1px 3px #000;
+}
+.video-time-display:hover{color:var(--green)}
+.time-divider{color:#a4aab3}
+.video-volume-group{position:relative;flex:0 0 34px;display:flex;align-items:center;justify-content:center;direction:ltr}
+#player-mute-button .volume-off{display:none}
+#player-mute-button.is-muted .volume-on{display:none}
+#player-mute-button.is-muted .volume-off{display:block}
+.volume-popover{
+  position:absolute;z-index:12;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);
+  width:58px;height:150px;padding:9px 6px 7px;border:1px solid #ffffff30;
+  border-radius:12px;background:rgba(12,15,20,.94);box-shadow:0 8px 28px #0009;
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  backdrop-filter:blur(12px)
+}
+.volume-popover[hidden]{display:none!important}
+.volume-value{color:#fff;font-size:10px;font-variant-numeric:tabular-nums}
+.player-volume{
+  appearance:none;-webkit-appearance:none;writing-mode:vertical-lr;direction:rtl;
+  width:6px;height:86px;margin:4px 0;border:0;border-radius:99px;
+  background:linear-gradient(to bottom,var(--green) 0%,var(--green) var(--volume-progress,100%),#59616c var(--volume-progress,100%),#59616c 100%);
+  cursor:pointer;outline:none
+}
+.player-volume::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border:0;border-radius:50%;background:#fff;box-shadow:0 1px 5px #0008}
+.player-volume::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:#fff}
+.volume-min-max{display:flex;flex-direction:column;justify-content:space-between;align-items:center;width:100%;color:#aab2be;font-size:8px;line-height:1}
+.fullscreen-control{flex:0 0 34px;margin-left:2px}
+.video-controls{
+  transform:translateY(0);opacity:1;
+  transition:transform .28s ease,opacity .2s ease;
+}
+.player-stage.controls-idle .video-controls{
+  transform:translateY(calc(100% - 2px));opacity:0;pointer-events:none;
+}
+.player-stage.controls-idle #drive-start{opacity:0;pointer-events:none;transition:opacity .2s}
+.player-stage #drive-start{transition:opacity .2s}
+.video-center-controls{gap:clamp(30px,7vw,88px)}
+.skip-button svg{width:28px;height:28px;fill:currentColor;stroke:none}
+.skip-button{display:grid;place-items:center}
+.player-main-button svg{width:32px;height:32px}
+.player-icon-button:disabled{opacity:.22}
+#video-role-lock{display:none!important}
+@media(max-width:700px){
+ .video-toolbar{gap:7px;min-height:38px}
+ .bottom-play-button,.fullscreen-control,.video-volume-group{flex-basis:30px}
+ .toolbar-icon-button{width:30px;height:30px}
+ .toolbar-icon-button svg{width:22px;height:22px}
+ .video-time-display{font-size:10px;gap:3px}
+ .volume-popover{height:138px;bottom:calc(100% + 9px)}
+ .player-volume{height:78px}
+ .video-center-controls{gap:clamp(22px,7vw,48px);top:43%}
+ .skip-button{width:46px;height:46px}
+ .skip-button svg{width:23px;height:23px}
+}
+@media(max-width:390px){
+ .video-toolbar{gap:4px}
+ .video-time-display{font-size:9px}
+ .bottom-play-button,.fullscreen-control,.video-volume-group{flex-basis:27px}
+}
+.player-stage:fullscreen .video-controls{padding:22px 26px 18px}
