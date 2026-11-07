@@ -207,9 +207,11 @@ async function openDrivePicker() {
     // explicit MIME values, and video/* can hide valid Drive files.
     // Show all files so the host can find their video; the server validates
     // the selected file's actual MIME type before creating the room.
+    // Default DocsView shows the user's regular My Drive.
+    // setEnableDrives(true) switches this view to Shared Drives only,
+    // which hides a user's personal My Drive files.
     const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-      .setIncludeFolders(false)
-      .setEnableDrives(true);
+      .setIncludeFolders(true);
     const picker = new google.picker.PickerBuilder()
       .addView(view)
       .setOAuthToken(tokenData.accessToken)
