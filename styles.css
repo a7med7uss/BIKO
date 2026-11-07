@@ -247,7 +247,4 @@ a { color: inherit; text-decoration: none; }
   .video-role-lock{font-size:9px}
   .video-center-controls{gap:17px}
 }
-@media(hover:hover) and (pointer:fine){
-  .player-stage:not(:hover):not(:focus-within) .video-controls{opacity:.18}
-  .player-stage:not(:hover):not(:focus-within) .video-controls:hover{opacity:1}
-}
+.player-stage .video-controls{opacity:1}
