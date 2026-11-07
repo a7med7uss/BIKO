@@ -101,9 +101,10 @@ function parseMediaInput(value) {
   if (!fileId) fileId = url.searchParams.get("id") || "";
   if (!/^[A-Za-z0-9_-]{10,200}$/.test(fileId)) throw new Error("لم أستطع استخراج معرّف الفيديو. انسخ رابط المشاركة من Google Drive.");
   const resourceKey = url.searchParams.get("resourcekey") || "";
-  const mediaUrl = "https://drive.google.com/uc?export=download&id=" + encodeURIComponent(fileId) +
-    (resourceKey ? "&resourcekey=" + encodeURIComponent(resourceKey) : "");
-  return { provider: "gdrive", mediaId: fileId, fileName: "Google Drive video", mimeType: "video/mp4", fileSize: 0, mediaUrl, webViewLink: url.toString(), shareMode: "pre-shared" };
+  const params = new URLSearchParams({ id: fileId, export: "download", confirm: "t" });
+  if (resourceKey) params.set("resourcekey", resourceKey);
+  const mediaUrl = "https://drive.usercontent.google.com/download?" + params.toString();
+  return { provider: "gdrive", mediaId: fileId, fileName: "Google Drive video", mimeType: "video/mp4", fileSize: 0, mediaUrl, resourceKey, webViewLink: url.toString(), shareMode: "pre-shared" };
 }
 
 async function createRoom(payload) {
@@ -298,8 +299,42 @@ function initDriveVideo() {
     }
   });
   driveVideo.addEventListener("error", () => {
-    $("player-error").hidden = false;
-    $("player-error").textContent = "تعذر تشغيل ملف Drive. تأكد أن الملف فيديو قابل للتنزيل وأنه مشارك مع أعضاء الغرفة. يمكن فتحه في Google Drive للتحقق من الوصول.";
+    const media = currentMedia || {};
+    const fallbackIndex = Number(driveVideo.dataset.fallbackIndex || "0");
+    const id = String(media.mediaId || "");
+    const resourceKey = String(media.resourceKey || "");
+    if (fallbackIndex < 1 && /^[A-Za-z0-9_-]{10,200}$/.test(id)) {
+      const params = new URLSearchParams({ export: "download", id, confirm: "t" });
+      if (resourceKey) params.set("resourcekey", resourceKey);
+      driveVideo.dataset.fallbackIndex = "1";
+      driveVideo.src = "https://drive.google.com/uc?" + params.toString();
+      driveVideo.load();
+      return;
+    }
+
+    const errorCode = driveVideo.error?.code || 0;
+    const explanations = {
+      1: "تم إلغاء طلب تشغيل الفيديو.",
+      2: "تعذر تنزيل الفيديو من Google Drive. قد تكون صلاحية التنزيل مقفولة أو وصل الملف إلى حد التنزيل.",
+      3: "تم تحميل الملف لكن المتصفح لم يستطع فك ترميز الفيديو. جرّب MP4 بترميز H.264 للفيديو وAAC للصوت.",
+      4: "رابط Drive أعاد صفحة HTML بدل بيانات الفيديو، أو أن الملف غير قابل للتشغيل المباشر."
+    };
+    const errorBox = $("player-error");
+    errorBox.hidden = false;
+    errorBox.textContent = (explanations[errorCode] || "تعذر تشغيل الفيديو من Google Drive.") +
+      " كود الخطأ: " + errorCode +
+      " — افتح إعدادات المشاركة (علامة الترس) وتأكد من السماح للمشاهدين بالتنزيل والنسخ والطباعة.";
+    if (/^[A-Za-z0-9_-]{10,200}$/.test(id)) {
+      const link = document.createElement("a");
+      link.href = media.webViewLink || "https://drive.google.com/file/d/" + encodeURIComponent(id) + "/view";
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = " فتح الملف في Google Drive";
+      link.style.display = "inline-block";
+      link.style.marginInlineStart = "8px";
+      link.style.color = "#b7ef70";
+      errorBox.appendChild(link);
+    }
   });
 }
 initDriveVideo();
