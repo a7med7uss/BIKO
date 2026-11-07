@@ -175,3 +175,14 @@ a { color: inherit; text-decoration: none; }
   .settings-heading { align-items:flex-start;flex-direction:column;gap:0; }
   .local-media-controls { width:100%; }
 }
+
+
+.drive-connect-row{display:flex;align-items:center;justify-content:center;gap:10px;min-height:38px;margin-top:12px}
+.drive-connect-button{padding:8px 16px;border:1px solid #485a35;border-radius:999px;background:#152015;color:#b7ef70;font:700 12px "Cairo",sans-serif;transition:background .15s,border-color .15s}
+.drive-connect-button:hover{background:#1d2b18;border-color:#789c4a}
+.drive-connect-button.connected{background:#19271a;border-color:#638546;color:#d3ff9b}
+.drive-connect-button:disabled{opacity:.55;cursor:wait}
+.drive-account-status{color:#818b99;font-size:10px;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.form-error:empty{display:none}
+.drive-connect-row:has(.drive-account-status:empty){gap:0}
+@media(max-width:520px){.drive-connect-row{margin-top:10px}.drive-connect-button{padding:7px 13px;font-size:11px}}
