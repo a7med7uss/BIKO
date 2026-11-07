@@ -407,7 +407,6 @@ function handleRoomMessage(message) {
     updateMembers(message.members);
     if (message.playback) {
       playback = message.playback;
-      updatePlaybackLabel();
       if (role !== "host") applyPlayback(playback, true);
     }
     return;
@@ -415,17 +414,10 @@ function handleRoomMessage(message) {
   if (message.type === "members") { updateMembers(message.members); return; }
   if (message.type === "playback" && message.playback) {
     playback = message.playback;
-    updatePlaybackLabel();
     if (role !== "host") applyPlayback(playback, false);
     return;
   }
   if (message.type === "error") toast(message.message || "تعذر تنفيذ الأمر.");
-}
-
-function updatePlaybackLabel() {
-  const el = $("playback-status");
-  if (!el || !playback) return;
-  el.textContent = playback.isPlaying ? "المشاهدة مستمرة" : "متوقف مؤقتًا";
 }
 
 function projectedTime(item) {
