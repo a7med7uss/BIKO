@@ -20,54 +20,14 @@
       <p class="tagline">نفس اللقطة، نفس اللحظة — مهما كانت المسافة.</p>
 
       <form id="create-form" class="url-form">
-        <label class="sr-only" for="cinema-url">رابط مشغل الفيديو</label>
-        <input id="cinema-url" type="text" inputmode="url" autocomplete="url"
-          placeholder="CinemaOS أو https://voe.sx/e/wwxgipn1bxwc أو كود iframe" required>
+        <label class="sr-only" for="cinema-url">رابط فيديو Google Drive عام</label>
+        <input id="cinema-url" type="url" inputmode="url" autocomplete="url"
+          placeholder="رابط فيديو Google Drive" required>
         <button id="create-btn" class="create-button" type="submit" aria-label="إنشاء غرفة مشاهدة" title="إنشاء غرفة">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         </button>
       </form>
       <p id="home-error" class="form-error" role="alert"></p>
-
-      <button id="browse-toggle" class="browse-toggle" type="button" aria-expanded="false">
-        <span class="browse-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M8 11h6M11 8v6"/></svg>
-        </span>
-        <span>تصفح CinemaOS</span>
-        <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-      </button>
-
-      <section id="browse-panel" class="browse-panel" hidden>
-        <div class="browse-toolbar">
-          <div>
-            <strong>مكتبة CinemaOS</strong>
-            <span>افتح المكتبة في تبويب مستقل، ثم انسخ رابط المشغّل إلى BIKO.</span>
-          </div>
-          <a class="open-cinema" href="https://cinemaos.tech/" target="_blank" rel="noopener noreferrer">فتح CinemaOS ↗</a>
-        </div>
-        <div class="browse-open-card">
-          <div class="browse-open-icon" aria-hidden="true">↗</div>
-          <div>
-            <strong>التصفح داخل الإطار غير متاح من CinemaOS</strong>
-            <p>صفحة المكتبة تمنع عرضها داخل بعض المواقع. افتحها في تبويب مستقل؛ تضمين مشغّل الفيلم نفسه يظل مدعومًا.</p>
-          </div>
-          <a class="primary-link" href="https://cinemaos.tech/" target="_blank" rel="noopener noreferrer">تصفح الأفلام</a>
-        </div>
-        <p class="browse-help">بعد اختيار الفيلم اضغط Watch Movie، وانسخ رابط المشغّل الذي يبدأ بـ <bdi>https://cinemaos.tech/player/</bdi> ثم ارجع والصقه في الحقل بالأعلى. يمكنك أيضًا لصق رابط VOE أو كود iframe كامل.</p>
-      </section>
-
-      <div class="drive-actions">
-        <button id="drive-picker-button" class="drive-button" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8l5 8-5 8H8l-5-8 5-8Z"/><path d="M8 4l5 8-5 8M16 4l-3 8 3 8"/></svg>
-          ربط Google Drive واختيار فيديو
-        </button>
-      </div>
-
-      <label class="share-consent">
-        <input id="drive-share-consent" type="checkbox">
-        <span>أسمح بمشاركة الفيديو المحدد مع أي شخص يملك رابطه (صلاحية مشاهدة فقط). يمكن لأي شخص يصل للرابط مشاهدة الملف حتى ألغي المشاركة من Google Drive.</span>
-      </label>
-      <p class="drive-privacy-note">لن يتم تغيير خصوصية الملف إلا عند تفعيل هذا الاختيار قبل اختيار الفيديو. من دون تفعيله، يجب أن يكون الملف مشاركًا مسبقًا مع جميع المشاهدين.</p>
 
     </div>
     <footer class="home-footer">احمد حسين عمارة · <a href="/privacy.html">سياسة الخصوصية</a></footer>
