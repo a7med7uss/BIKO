@@ -681,14 +681,7 @@ $("player-mute-button")?.addEventListener("click", event => {
   volumePopoverOpen = !volumePopoverOpen;
   $("volume-popover").hidden = !volumePopoverOpen;
   $("player-mute-button").setAttribute("aria-expanded", String(volumePopoverOpen));
-  if (volumePopoverOpen) {
-    if (driveVideo.muted || driveVideo.volume === 0) {
-      driveVideo.muted = false;
-      driveVideo.volume = 0.65;
-      updateVolumeButton();
-    }
-    showVideoControls();
-  }
+  if (volumePopoverOpen) showVideoControls();
 });
 $("video-time-display")?.addEventListener("click", () => {
   showRemainingTime = !showRemainingTime;
@@ -710,7 +703,9 @@ function updateVolumeButton() {
   button.setAttribute("aria-label", muted ? "صوت مكتوم — إظهار مستوى الصوت" : "إظهار مستوى الصوت");
   button.title = muted ? "صوت مكتوم" : "مستوى الصوت";
   const slider = $("player-volume");
-  if (slider && document.activeElement !== slider) slider.value = String(muted ? 0 : driveVideo.volume);
+  const visibleVolume = muted ? 0 : driveVideo.volume;
+  if (slider && document.activeElement !== slider) slider.value = String(visibleVolume);
+  if (slider) slider.style.setProperty("--volume-progress", (visibleVolume * 100) + "%");
   const value = $("volume-value");
   if (value) value.textContent = Math.round((muted ? 0 : driveVideo.volume) * 100) + "%";
 }
