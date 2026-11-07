@@ -329,16 +329,24 @@ function setConnection(value) {
 
 function setRole(nextRole) {
   role = nextRole === "host" ? "host" : "viewer";
-  const pill = $("role-pill"), controls = $("host-controls"), hint = $("sync-hint");
+  const pill = $("role-pill");
   if (pill) {
     pill.textContent = role === "host" ? "أنت المضيف" : "مشاهد";
     pill.classList.toggle("host", role === "host");
   }
-  if (controls) controls.hidden = role !== "host";
-  if (hint) hint.textContent = role === "host"
-    ? "أنت تتحكم في تشغيل الفيديو وإيقافه وتقديمه للمجموعة."
-    : "المضيف يتحكم في المشاهدة. اضغط بدء المشاهدة عند الانضمام، واضبط الصوت محليًا.";
-  if (driveVideo) driveVideo.controls = role === "host";
+
+  // The custom player uses the same video element; native Drive controls stay hidden.
+  driveVideo.controls = false;
+  document.querySelectorAll("#video-controls [data-action]").forEach(button => {
+    button.disabled = role !== "host";
+    button.classList.toggle("control-locked", role !== "host");
+    button.title = role === "host" ? button.dataset.action : "المضيف يتحكم في التشغيل";
+  });
+  const lock = $("video-role-lock");
+  if (lock) lock.hidden = role === "host";
+  const start = $("drive-start");
+  if (start && role === "host") start.hidden = true;
+  updatePlayerButtons();
 }
 
 function sendSocket(payload) {
@@ -432,13 +440,18 @@ function applyPlayback(item, force) {
     try { driveVideo.currentTime = Math.max(0, target); } catch (_) {}
   }
   if (item.isPlaying) {
-    driveVideo.play().then(() => { $("drive-start").hidden = true; }).catch(() => {
+    driveVideo.play().then(() => {
+      $("drive-start").hidden = true;
+      updatePlayerButtons();
+    }).catch(() => {
       $("drive-start").hidden = false;
     });
   } else {
     driveVideo.pause();
     $("drive-start").hidden = true;
+    updatePlayerButtons();
   }
+  updatePlayerTimeline();
   setTimeout(() => { suppressDriveEventsUntil = 0; }, 1150);
 }
 
@@ -456,21 +469,27 @@ function publishHostEvent(action, time, isPlaying) {
 }
 
 function initDriveVideo() {
+  driveVideo.controls = false;
   driveVideo.addEventListener("loadedmetadata", () => {
     playerReady = true;
     localTime = driveVideo.currentTime || 0;
+    updatePlayerTimeline();
+    updatePlayerButtons();
     if (role !== "host" && playback) applyPlayback(playback, true);
-    $("drive-start").hidden = role !== "host" && !!(playback && playback.isPlaying);
+    $("drive-start").hidden = role === "host" || !(playback && playback.isPlaying);
   });
-  driveVideo.addEventListener("canplay", () => { playerReady = true; });
+  driveVideo.addEventListener("durationchange", updatePlayerTimeline);
   driveVideo.addEventListener("play", () => {
     localPlaying = true;
+    $("drive-start").hidden = true;
+    updatePlayerButtons();
     if (role === "host" && Date.now() > suppressDriveEventsUntil) {
       publishHostEvent("play", driveVideo.currentTime, true);
     }
   });
   driveVideo.addEventListener("pause", () => {
     localPlaying = false;
+    updatePlayerButtons();
     if (role === "host" && Date.now() > suppressDriveEventsUntil && !driveVideo.ended) {
       publishHostEvent("pause", driveVideo.currentTime, false);
     }
@@ -483,6 +502,7 @@ function initDriveVideo() {
   });
   driveVideo.addEventListener("timeupdate", () => {
     localTime = driveVideo.currentTime;
+    updatePlayerTimeline();
     if (role === "host" && Date.now() > suppressDriveEventsUntil && !driveVideo.paused) {
       publishHostEvent("progress", driveVideo.currentTime, true);
     }
@@ -529,16 +549,57 @@ async function loadRoom() {
 }
 
 function hostAction(action) {
-  if (role !== "host") { toast("التحكم متاح للمضيف فقط."); return; }
+  if (role !== "host") {
+    if (action === "toggle" && playback?.isPlaying) applyPlayback(playback, true);
+    else toast("المضيف يتحكم في التشغيل والتقديم.");
+    return;
+  }
   if (action === "seek-back" || action === "seek-forward") {
     const next = Math.max(0, (driveVideo.currentTime || 0) + (action === "seek-back" ? -10 : 10));
     driveVideo.currentTime = next;
     publishHostEvent("seek", next, !driveVideo.paused);
   } else if (action === "toggle") {
-    if (driveVideo.paused) driveVideo.play().catch(() => { $("drive-start").hidden = false; });
-    else driveVideo.pause();
+    if (driveVideo.paused) {
+      driveVideo.play().then(() => { $("drive-start").hidden = true; }).catch(() => toast("تعذر بدء الفيديو."));
+    } else driveVideo.pause();
   }
 }
+
+function formatVideoTime(value) {
+  if (!Number.isFinite(value) || value < 0) return "0:00";
+  const seconds = Math.floor(value);
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainder = seconds % 60;
+  return hours > 0
+    ? hours + ":" + String(minutes).padStart(2,"0") + ":" + String(remainder).padStart(2,"0")
+    : minutes + ":" + String(remainder).padStart(2,"0");
+}
+
+function updatePlayerButtons() {
+  const button = $("player-play-button");
+  if (!button) return;
+  const isPlaying = !driveVideo.paused && !driveVideo.ended;
+  button.classList.toggle("is-playing", isPlaying);
+  button.setAttribute("aria-label", isPlaying ? "إيقاف مؤقت" : "تشغيل");
+  button.title = isPlaying ? "إيقاف مؤقت" : "تشغيل";
+}
+
+function updatePlayerTimeline() {
+  const duration = Number.isFinite(driveVideo.duration) ? driveVideo.duration : 0;
+  const current = Number.isFinite(driveVideo.currentTime) ? driveVideo.currentTime : 0;
+  const currentLabel = $("video-current-time");
+  const durationLabel = $("video-duration");
+  const seek = $("video-seek");
+  if (currentLabel) currentLabel.textContent = formatVideoTime(current);
+  if (durationLabel) durationLabel.textContent = formatVideoTime(duration);
+  if (seek && document.activeElement !== seek) {
+    seek.max = String(Math.max(1, Math.floor(duration * 10)));
+    seek.value = String(Math.min(Number(seek.max), Math.floor(current * 10)));
+    seek.style.setProperty("--seek-progress", duration > 0 ? (current / duration * 100) + "%" : "0%");
+  }
+}
+
 document.addEventListener("click", event => {
   const button = event.target.closest("[data-action]");
   if (button) hostAction(button.dataset.action);
@@ -546,7 +607,7 @@ document.addEventListener("click", event => {
 
 $("drive-start")?.addEventListener("click", () => {
   if (role === "host") {
-    driveVideo.play().catch(() => toast("تعذر بدء الفيديو."));
+    driveVideo.play().then(() => { $("drive-start").hidden = true; }).catch(() => toast("تعذر بدء الفيديو."));
   } else if (playback?.isPlaying) {
     applyPlayback(playback, true);
   } else {
@@ -554,14 +615,42 @@ $("drive-start")?.addEventListener("click", () => {
   }
 });
 
-$("local-volume")?.addEventListener("input", event => {
-  driveVideo.volume = Number(event.target.value);
-  driveVideo.muted = Number(event.target.value) === 0;
+$("video-seek")?.addEventListener("input", event => {
+  const seek = event.currentTarget;
+  const duration = Number.isFinite(driveVideo.duration) ? driveVideo.duration : 0;
+  const next = Number(seek.value) / 10;
+  $("video-current-time").textContent = formatVideoTime(next);
+  seek.style.setProperty("--seek-progress", duration > 0 ? (next / duration * 100) + "%" : "0%");
 });
-$("local-mute")?.addEventListener("click", () => {
+$("video-seek")?.addEventListener("change", event => {
+  if (role !== "host") return;
+  const next = Math.max(0, Number(event.currentTarget.value) / 10);
+  if (Number.isFinite(driveVideo.duration)) driveVideo.currentTime = Math.min(next, driveVideo.duration);
+  else driveVideo.currentTime = next;
+  publishHostEvent("seek", driveVideo.currentTime, !driveVideo.paused);
+});
+$("player-volume")?.addEventListener("input", event => {
+  driveVideo.volume = Number(event.currentTarget.value);
+  driveVideo.muted = driveVideo.volume === 0;
+  updateVolumeButton();
+});
+$("player-mute-button")?.addEventListener("click", () => {
   driveVideo.muted = !driveVideo.muted;
-  $("local-mute").textContent = driveVideo.muted ? "إلغاء الكتم" : "كتم الصوت";
+  if (!driveVideo.muted && driveVideo.volume === 0) {
+    driveVideo.volume = 0.65;
+    $("player-volume").value = "0.65";
+  }
+  updateVolumeButton();
 });
+function updateVolumeButton() {
+  const button = $("player-mute-button");
+  if (!button) return;
+  const muted = driveVideo.muted || driveVideo.volume === 0;
+  button.classList.toggle("is-muted", muted);
+  button.setAttribute("aria-label", muted ? "إلغاء كتم الصوت" : "كتم الصوت");
+  button.title = muted ? "إلغاء كتم الصوت" : "كتم الصوت";
+}
+
 $("copy-invite")?.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(location.href);
