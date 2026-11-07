@@ -30,6 +30,10 @@ let toastTimer = null;
 let pickerPromise = null;
 let pickerBusy = false;
 let hostTicket = null;
+let showRemainingTime = false;
+let controlsIdleTimer = null;
+let volumePopoverOpen = false;
+const CONTROL_IDLE_MS = 3000;
 
 function getClientId() {
   const key = "biko-client-id";
@@ -335,17 +339,16 @@ function setRole(nextRole) {
     pill.classList.toggle("host", role === "host");
   }
 
-  // The custom player uses the same video element; native Drive controls stay hidden.
   driveVideo.controls = false;
   document.querySelectorAll("#video-controls [data-action]").forEach(button => {
     button.disabled = role !== "host";
     button.classList.toggle("control-locked", role !== "host");
-    button.title = role === "host" ? button.dataset.action : "المضيف يتحكم في التشغيل";
+    button.title = role === "host" ? button.getAttribute("aria-label") : "المضيف يتحكم في التشغيل";
   });
   const seek = $("video-seek");
   if (seek) seek.disabled = role !== "host";
   const lock = $("video-role-lock");
-  if (lock) lock.hidden = role === "host";
+  if (lock) lock.hidden = true;
   const start = $("drive-start");
   if (start && role === "host") start.hidden = true;
   updatePlayerButtons();
@@ -469,6 +472,7 @@ function initDriveVideo() {
     localTime = driveVideo.currentTime || 0;
     updatePlayerTimeline();
     updatePlayerButtons();
+    updateVolumeButton();
     if (role !== "host" && playback) applyPlayback(playback, true);
     $("drive-start").hidden = role === "host" || !(playback && playback.isPlaying);
   });
@@ -477,6 +481,7 @@ function initDriveVideo() {
     localPlaying = true;
     $("drive-start").hidden = true;
     updatePlayerButtons();
+    showVideoControls();
     if (role === "host" && Date.now() > suppressDriveEventsUntil) {
       publishHostEvent("play", driveVideo.currentTime, true);
     }
@@ -484,6 +489,7 @@ function initDriveVideo() {
   driveVideo.addEventListener("pause", () => {
     localPlaying = false;
     updatePlayerButtons();
+    showVideoControls();
     if (role === "host" && Date.now() > suppressDriveEventsUntil && !driveVideo.ended) {
       publishHostEvent("pause", driveVideo.currentTime, false);
     }
@@ -571,22 +577,27 @@ function formatVideoTime(value) {
 }
 
 function updatePlayerButtons() {
-  const button = $("player-play-button");
-  if (!button) return;
   const isPlaying = !driveVideo.paused && !driveVideo.ended;
-  button.classList.toggle("is-playing", isPlaying);
-  button.setAttribute("aria-label", isPlaying ? "إيقاف مؤقت" : "تشغيل");
-  button.title = isPlaying ? "إيقاف مؤقت" : "تشغيل";
+  ["player-play-button", "player-bottom-play"].forEach(id => {
+    const button = $(id);
+    if (!button) return;
+    button.classList.toggle("is-playing", isPlaying);
+    button.setAttribute("aria-label", isPlaying ? "إيقاف مؤقت" : "تشغيل");
+    button.title = isPlaying ? "إيقاف مؤقت" : "تشغيل";
+  });
 }
 
 function updatePlayerTimeline() {
   const duration = Number.isFinite(driveVideo.duration) ? driveVideo.duration : 0;
   const current = Number.isFinite(driveVideo.currentTime) ? driveVideo.currentTime : 0;
+  const remaining = Math.max(0, duration - current);
   const currentLabel = $("video-current-time");
   const durationLabel = $("video-duration");
   const seek = $("video-seek");
-  if (currentLabel) currentLabel.textContent = formatVideoTime(current);
+  const timeButton = $("video-time-display");
+  if (currentLabel) currentLabel.textContent = showRemainingTime ? "-" + formatVideoTime(remaining) : formatVideoTime(current);
   if (durationLabel) durationLabel.textContent = formatVideoTime(duration);
+  if (timeButton) timeButton.title = showRemainingTime ? "عرض الوقت المنقضي" : "عرض الوقت المتبقي";
   if (seek && document.activeElement !== seek) {
     seek.max = String(Math.max(1, Math.floor(duration * 10)));
     seek.value = String(Math.min(Number(seek.max), Math.floor(current * 10)));
@@ -596,8 +607,43 @@ function updatePlayerTimeline() {
 
 document.addEventListener("click", event => {
   const button = event.target.closest("[data-action]");
-  if (button) hostAction(button.dataset.action);
+  if (button) {
+    hostAction(button.dataset.action);
+    showVideoControls();
+  }
 });
+
+function showVideoControls() {
+  const stage = $("player-stage");
+  if (!stage) return;
+  stage.classList.remove("controls-idle");
+  clearTimeout(controlsIdleTimer);
+  controlsIdleTimer = setTimeout(() => {
+    if (volumePopoverOpen) {
+      volumePopoverOpen = false;
+      $("volume-popover").hidden = true;
+      $("player-mute-button")?.setAttribute("aria-expanded", "false");
+    }
+    stage.classList.add("controls-idle");
+  }, CONTROL_IDLE_MS);
+}
+
+function initControlAutoHide() {
+  const stage = $("player-stage");
+  if (!stage) return;
+  ["pointermove", "pointerdown", "touchstart", "keydown", "focusin"].forEach(type => {
+    stage.addEventListener(type, showVideoControls, { passive: type === "touchstart" });
+  });
+  stage.addEventListener("pointerleave", () => {
+    clearTimeout(controlsIdleTimer);
+    controlsIdleTimer = setTimeout(() => stage.classList.add("controls-idle"), CONTROL_IDLE_MS);
+  });
+  stage.addEventListener("click", event => {
+    if (event.target === driveVideo) showVideoControls();
+  });
+  showVideoControls();
+}
+initControlAutoHide();
 
 $("drive-start")?.addEventListener("click", () => {
   if (role === "host") {
@@ -624,25 +670,49 @@ $("video-seek")?.addEventListener("change", event => {
   publishHostEvent("seek", driveVideo.currentTime, !driveVideo.paused);
 });
 $("player-volume")?.addEventListener("input", event => {
-  driveVideo.volume = Number(event.currentTarget.value);
-  driveVideo.muted = driveVideo.volume === 0;
+  const value = Math.min(1, Math.max(0, Number(event.currentTarget.value)));
+  driveVideo.volume = value;
+  driveVideo.muted = value === 0;
   updateVolumeButton();
+  showVideoControls();
 });
-$("player-mute-button")?.addEventListener("click", () => {
-  driveVideo.muted = !driveVideo.muted;
-  if (!driveVideo.muted && driveVideo.volume === 0) {
-    driveVideo.volume = 0.65;
-    $("player-volume").value = "0.65";
+$("player-mute-button")?.addEventListener("click", event => {
+  event.stopPropagation();
+  volumePopoverOpen = !volumePopoverOpen;
+  $("volume-popover").hidden = !volumePopoverOpen;
+  $("player-mute-button").setAttribute("aria-expanded", String(volumePopoverOpen));
+  if (volumePopoverOpen) {
+    if (driveVideo.muted || driveVideo.volume === 0) {
+      driveVideo.muted = false;
+      driveVideo.volume = 0.65;
+      updateVolumeButton();
+    }
+    showVideoControls();
   }
-  updateVolumeButton();
+});
+$("video-time-display")?.addEventListener("click", () => {
+  showRemainingTime = !showRemainingTime;
+  updatePlayerTimeline();
+  showVideoControls();
+});
+document.addEventListener("click", event => {
+  if (volumePopoverOpen && !event.target.closest(".video-volume-group")) {
+    volumePopoverOpen = false;
+    $("volume-popover").hidden = true;
+    $("player-mute-button").setAttribute("aria-expanded", "false");
+  }
 });
 function updateVolumeButton() {
   const button = $("player-mute-button");
   if (!button) return;
   const muted = driveVideo.muted || driveVideo.volume === 0;
   button.classList.toggle("is-muted", muted);
-  button.setAttribute("aria-label", muted ? "إلغاء كتم الصوت" : "كتم الصوت");
-  button.title = muted ? "إلغاء كتم الصوت" : "كتم الصوت";
+  button.setAttribute("aria-label", muted ? "صوت مكتوم — إظهار مستوى الصوت" : "إظهار مستوى الصوت");
+  button.title = muted ? "صوت مكتوم" : "مستوى الصوت";
+  const slider = $("player-volume");
+  if (slider && document.activeElement !== slider) slider.value = String(muted ? 0 : driveVideo.volume);
+  const value = $("volume-value");
+  if (value) value.textContent = Math.round((muted ? 0 : driveVideo.volume) * 100) + "%";
 }
 
 $("copy-invite")?.addEventListener("click", async () => {
