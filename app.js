@@ -342,6 +342,8 @@ function setRole(nextRole) {
     button.classList.toggle("control-locked", role !== "host");
     button.title = role === "host" ? button.dataset.action : "المضيف يتحكم في التشغيل";
   });
+  const seek = $("video-seek");
+  if (seek) seek.disabled = role !== "host";
   const lock = $("video-role-lock");
   if (lock) lock.hidden = role === "host";
   const start = $("drive-start");
