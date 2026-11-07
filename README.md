@@ -19,6 +19,8 @@ Create an OAuth Client ID of type **Web application**:
 - Authorized JavaScript origin: `https://biko-watch-party.vercel.app`
 - Authorized redirect URI: `https://biko-watch-party.vercel.app/api/drive/oauth-callback`
 
+The OAuth redirect URI must match exactly, including the path and HTTPS scheme. Set the OAuth consent screen to External and publish it to Production when ready for general users. Google external apps left in Testing can receive refresh tokens that expire after seven days.
+
 Configure the OAuth consent screen as External, request only:
 - `openid`
 - `email`
