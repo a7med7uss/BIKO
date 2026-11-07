@@ -18,7 +18,7 @@ jobs:
           node-version: 22
       - name: Check JavaScript syntax
         run: node --check app.js
-      - name: Check Google Drive config endpoint syntax
-        run: node --check api/google-drive-config.js
+      - name: Check Google OAuth callback syntax
+        run: node --check api/drive/oauth-callback.js
       - name: Validate Vercel configuration
         run: node -e "JSON.parse(require('fs').readFileSync('vercel.json', 'utf8'))"
