@@ -203,9 +203,13 @@ async function openDrivePicker() {
       loadGooglePicker(),
       api("/api/drive/picker-token", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })
     ]);
+    // Do not apply a MIME filter here. Google Picker's setMimeTypes expects
+    // explicit MIME values, and video/* can hide valid Drive files.
+    // Show all files so the host can find their video; the server validates
+    // the selected file's actual MIME type before creating the room.
     const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-      .setMimeTypes("video/*")
-      .setIncludeFolders(false);
+      .setIncludeFolders(false)
+      .setEnableDrives(true);
     const picker = new google.picker.PickerBuilder()
       .addView(view)
       .setOAuthToken(tokenData.accessToken)
