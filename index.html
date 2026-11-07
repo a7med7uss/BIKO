@@ -40,19 +40,25 @@
     <header class="room-header">
       <a class="brand brand-small" href="/" aria-label="BIKO home">BIKO</a>
       <div class="room-header-right">
-        <span id="role-pill" class="role-pill">مشاهد</span>
-        <span class="connection-pill"><i id="connection-dot" class="connection-dot"></i><span id="connection-label">جارٍ الاتصال</span></span>
-        <span class="members-pill"><span id="member-count">1</span> أعضاء</span>
-        <button id="copy-invite" class="secondary-button" type="button">نسخ الدعوة</button>
-        <a class="home-link" href="/">الرئيسية</a>
+        <div class="room-status-group" aria-label="حالة الغرفة">
+          <span id="role-pill" class="role-pill">مشاهد</span>
+          <span class="connection-pill"><i id="connection-dot" class="connection-dot"></i><span id="connection-label">جارٍ الاتصال</span></span>
+          <span class="members-pill">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6M23 11h-6"/></svg>
+            <span id="member-count">1</span><span class="members-label">أعضاء</span>
+          </span>
+        </div>
+        <button id="copy-invite" class="secondary-button copy-invite-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+          <span>نسخ الدعوة</span>
+        </button>
       </div>
     </header>
 
     <section class="watch-area">
       <div class="player-heading">
-        <div>
+        <div class="room-title-wrap">
           <h1 id="room-title">غرفة مشاهدة</h1>
-          <p id="room-subtitle">يتم تجهيز فيديو Google Drive...</p>
         </div>
 
       </div>
