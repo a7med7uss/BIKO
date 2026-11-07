@@ -1,36 +1,30 @@
-# BIKO — Watch together
+# BIKO — Google Drive Watch Party
 
-BIKO is a lightweight watch-party web app. Each participant loads the video in their own browser. BIKO sends room state and supported playback commands only; it does not relay video bytes.
+BIKO is a lightweight watch-party website. The host pastes a Google Drive video sharing link, creates a room, and shares the invitation URL. Each viewer's browser loads the same public Drive file directly; BIKO sends playback state over the room WebSocket, not video bytes.
 
-## Providers
+## How to use
 
-- **CinemaOS**: movies and TV player links. The library opens in a separate tab; the player itself is embedded.
-- **VOE**: paste a VOE embed URL such as `https://voe.sx/e/wwxgipn1bxwc`, a supported `shannoncoldalready.com/e/{code}` URL, or the iframe HTML containing that URL. BIKO validates the URL and embeds the provider's player.
-- **Google Drive**: select a video through Google Picker after the site owner configures the BIKO Google OAuth application.
+1. In Google Drive, open the video's Share dialog.
+2. Set General access to Anyone with the link — Viewer.
+3. Copy the sharing link and paste it into BIKO.
+4. Create the room and share the invitation link with friends.
 
-## Synchronization notes
+No Google sign-in, OAuth client, API key, Picker setup, or account linking is required for this public-link flow. Do not paste private Drive links: room members need permission to view the file.
 
-- Host-only synchronization is implemented for providers whose embedded player can be controlled through a documented interface or native HTML5 video.
-- Google Drive uses the native HTML5 video element, so BIKO can synchronize play, pause, seek and late joining.
-- CinemaOS uses its documented cross-origin player messaging where available.
-- The VOE public documentation found for this integration does not document a parent-page API for reading playback time or issuing play/pause/seek commands. VOE rooms therefore embed and play the VOE iframe, but playback is controlled locally inside the VOE player and is not synchronized by BIKO. BIKO deliberately does not guess undocumented postMessage commands, proxy media, extract stream URLs, or interfere with the provider's advertising.
-- VOE's terms require that embedded content not have its advertising blocked or visually/technically altered, and that the user possess the necessary content rights. VOE describes its service as intended for adults and notes that advertising may be adult-oriented. Review the provider's terms before use.
+## Playback and compatibility
 
-## Google Drive setup
+- Native HTML5 video playback with host-only play, pause and seek controls.
+- Playback state is synchronized through the existing Cloudflare Durable Object room service.
+- Each participant fetches the video from Google Drive independently; BIKO does not proxy or relay video data.
+- The browser/device must support the video's codec and Drive must allow direct download/streaming for the file.
+- Google Drive may throttle downloads, require a confirmation page for large files, or restrict files with unusual permissions. These restrictions cannot be eliminated by BIKO. MP4 (H.264/AAC) is the safest compatibility target.
 
-Regular BIKO users do not enter Google Cloud credentials. The BIKO site owner configures the application's Google credentials on the Vercel project once. A user then connects their own account, approves the requested access and selects a video.
+## Architecture
 
-Environment variables:
-- `GOOGLE_DRIVE_CLIENT_ID`
-- `GOOGLE_DRIVE_API_KEY`
-- `GOOGLE_DRIVE_APP_ID`
-
-Enable Google Picker API and Google Drive API. Use the narrow `drive.file` OAuth scope and authorize the production origin `https://biko-watch-party.vercel.app`.
+- Frontend: static HTML/CSS/JavaScript hosted on Vercel.
+- Realtime sync: Cloudflare Worker + Durable Objects.
+- Media: public Google Drive sharing links only.
 
 ## Local development
 
-Serve the repository root with any static HTTP server. The app uses the existing sync worker by default: `https://biko.qeshta.workers.dev`.
-
-## Deployment
-
-The repository is configured for a static Vercel deployment. `/room/{roomId}` rewrites to the app entry page.
+Serve the repository root with any static HTTP server. The app uses https://biko.qeshta.workers.dev.
