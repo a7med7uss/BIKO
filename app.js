@@ -100,8 +100,10 @@ function parseMediaInput(value) {
   if (match) fileId = match[1];
   if (!fileId) fileId = url.searchParams.get("id") || "";
   if (!/^[A-Za-z0-9_-]{10,200}$/.test(fileId)) throw new Error("لم أستطع استخراج معرّف الفيديو. انسخ رابط المشاركة من Google Drive.");
-  const mediaUrl = "https://drive.google.com/uc?export=download&id=" + encodeURIComponent(fileId);
-  return { provider: "gdrive", mediaId: fileId, fileName: "Google Drive video", mimeType: "video/mp4", fileSize: 0, mediaUrl, webViewLink: "https://drive.google.com/file/d/" + encodeURIComponent(fileId) + "/view", shareMode: "pre-shared" };
+  const resourceKey = url.searchParams.get("resourcekey") || "";
+  const mediaUrl = "https://drive.google.com/uc?export=download&id=" + encodeURIComponent(fileId) +
+    (resourceKey ? "&resourcekey=" + encodeURIComponent(resourceKey) : "");
+  return { provider: "gdrive", mediaId: fileId, fileName: "Google Drive video", mimeType: "video/mp4", fileSize: 0, mediaUrl, webViewLink: url.toString(), shareMode: "pre-shared" };
 }
 
 async function createRoom(payload) {
