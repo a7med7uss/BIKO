@@ -1,5 +1,4 @@
 const SYNC_API = (window.BIKO_SYNC_API || "https://biko.qeshta.workers.dev").replace(/\/$/, "");
-const CINEMAOS_ORIGIN = "https://cinemaos.tech";
 const $ = (id) => document.getElementById(id);
 
 const home = $("home");
@@ -10,7 +9,6 @@ const createButton = $("create-btn");
 const homeError = $("home-error");
 const browseToggle = $("browse-toggle");
 const browsePanel = $("browse-panel");
-const drivePickerButton = $("drive-picker-button");
 const driveVideo = $("drive-video");
 const playerFrame = $("player-frame");
 
@@ -29,7 +27,7 @@ let localPlaying = null;
 let lastProgressSent = 0;
 let toastTimer = null;
 let currentMedia = null;
-let playerProvider = "cinemaos";
+let playerProvider = "gdrive";
 let suppressDriveEventsUntil = 0;
 let driveAccessToken = null;
 let googleTokenClient = null;
@@ -85,85 +83,25 @@ function setConnection(value) {
 
 function setRole(nextRole) {
   role = nextRole === "host" ? "host" : "viewer";
-  const pill = $("role-pill");
-  const controls = $("host-controls");
-  const hint = $("sync-hint");
-  if (pill) {
-    pill.textContent = role === "host" ? "أنت المضيف" : "مشاهد";
-    pill.classList.toggle("host", role === "host");
-  }
-  if (controls) controls.hidden = role !== "host" || playerProvider === "voe";
-  if (hint) hint.textContent = playerProvider === "gdrive"
-    ? (role === "host" ? "أنت تتحكم في تشغيل الفيديو وتقديمه وإيقافه للمجموعة." : "تحكم المشاهدة للمضيف فقط. يمكنك ضبط مستوى الصوت محليًا.")
-    : playerProvider === "voe"
-      ? "مشغل VOE لا يعلن واجهة تحكم خارجية موثقة؛ كل عضو يشغّل المقطع من داخل المشغّل بنفسه."
-      : (role === "host" ? "أنت تتحكم في مشاهدة المجموعة." : "المضيف فقط يتحكم في المشاهدة. الترجمة والصوت من إعدادات CinemaOS.");
-  if (driveVideo && playerProvider === "gdrive") driveVideo.controls = role === "host";
+  const pill = $("role-pill"), controls = $("host-controls"), hint = $("sync-hint");
+  if (pill) { pill.textContent = role === "host" ? "أنت المضيف" : "مشاهد"; pill.classList.toggle("host", role === "host"); }
+  if (controls) controls.hidden = role !== "host";
+  if (hint) hint.textContent = role === "host" ? "أنت تتحكم في تشغيل الفيديو وإيقافه وتقديمه للمجموعة." : "المضيف يتحكم في المشاهدة. يمكنك ضبط الصوت محليًا.";
+  if (driveVideo) driveVideo.controls = role === "host";
+  if ($("drive-start")) $("drive-start").hidden = role === "host" || !(playback && playback.isPlaying);
 }
-
-function parseCinemaUrl(value) {
-  let url;
-  try { url = new URL(value.trim()); }
-  catch (_) { throw new Error("الصق رابط CinemaOS كاملًا."); }
-  if (url.protocol !== "https:" || !["cinemaos.tech", "www.cinemaos.tech"].includes(url.hostname)) {
-    throw new Error("الرابط لازم يكون من CinemaOS (cinemaos.tech).");
-  }
-  const parts = url.pathname.split("/").filter(Boolean);
-  if (parts[0] !== "player" || !/^\d+$/.test(parts[1] || "")) {
-    throw new Error("استخدم رابط المشغّل بالشكل: cinemaos.tech/player/رقم الفيلم");
-  }
-  const mediaId = parts[1];
-  let mediaType = "movie";
-  let season = null;
-  let episode = null;
-  if (parts.length >= 4) {
-    if (!/^\d+$/.test(parts[2]) || !/^\d+$/.test(parts[3])) {
-      throw new Error("رابط المسلسل لازم يحتوي على رقم الموسم والحلقة.");
-    }
-    mediaType = "tv";
-    season = Number(parts[2]);
-    episode = Number(parts[3]);
-  } else if (parts.length > 2) {
-    throw new Error("رابط المسلسل غير مكتمل؛ أضف الموسم والحلقة.");
-  }
-  return { mediaId, mediaType, season, episode, sourceUrl: url.toString() };
-}
-
 function parseMediaInput(value) {
   const raw = String(value || "").trim();
-  const iframeMatch = raw.match(/<iframe\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/i);
-  const candidate = iframeMatch ? iframeMatch[1].trim() : raw;
   let url;
-  try { url = new URL(candidate); }
-  catch (_) { throw new Error("الصق رابط مشغّل صحيحًا أو كود iframe كاملًا."); }
-
-  if (["cinemaos.tech", "www.cinemaos.tech"].includes(url.hostname)) {
-    return { provider: "cinemaos", ...parseCinemaUrl(url.toString()) };
-  }
-
-  const voeHosts = ["voe.sx", "www.voe.sx", "shannoncoldalready.com", "www.shannoncoldalready.com"];
-  if (url.protocol !== "https:" || !voeHosts.includes(url.hostname.toLowerCase())) {
-    throw new Error("المصادر المدعومة حاليًا: CinemaOS وVOE.");
-  }
-
-  const parts = url.pathname.split("/").filter(Boolean);
-  let code = "";
-  if (parts.length === 2 && parts[0].toLowerCase() === "e") code = parts[1];
-  else if (parts.length === 1) code = parts[0];
-  if (!/^[a-z0-9]{8,20}$/i.test(code)) {
-    throw new Error("رابط VOE غير مكتمل. استخدم رابطًا مثل https://voe.sx/e/wwxgipn1bxwc");
-  }
-
-  url.pathname = "/e/" + code;
-  url.hash = "";
-  return {
-    provider: "voe",
-    mediaId: code,
-    playerUrl: url.toString(),
-    mediaUrl: url.toString(),
-    sourceUrl: candidate,
-    fileName: "فيديو من VOE"
-  };
+  try { url = new URL(raw); } catch (_) { throw new Error("الصق رابط مشاركة Google Drive صحيحًا."); }
+  if (url.protocol !== "https:" || !["drive.google.com", "www.drive.google.com"].includes(url.hostname.toLowerCase())) throw new Error("استخدم رابط فيديو من Google Drive فقط.");
+  let fileId = "";
+  const match = url.pathname.match(/\/file\/d\/([A-Za-z0-9_-]{10,200})/);
+  if (match) fileId = match[1];
+  if (!fileId) fileId = url.searchParams.get("id") || "";
+  if (!/^[A-Za-z0-9_-]{10,200}$/.test(fileId)) throw new Error("لم أستطع استخراج معرّف الفيديو. انسخ رابط المشاركة من Google Drive.");
+  const mediaUrl = "https://drive.google.com/uc?export=download&id=" + encodeURIComponent(fileId);
+  return { provider: "gdrive", mediaId: fileId, fileName: "Google Drive video", mimeType: "video/mp4", fileSize: 0, mediaUrl, webViewLink: "https://drive.google.com/file/d/" + encodeURIComponent(fileId) + "/view", shareMode: "pre-shared" };
 }
 
 async function createRoom(payload) {
@@ -199,227 +137,6 @@ if (createForm) {
     }
   });
 }
-
-function loadScript(src, id) {
-  return new Promise((resolve, reject) => {
-    if (document.getElementById(id)) {
-      const existing = document.getElementById(id);
-      if (existing.dataset.loaded === "true") return resolve();
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("تعذر تحميل مكتبات Google.")), { once: true });
-      return;
-    }
-    const script = document.createElement("script");
-    script.id = id;
-    script.src = src;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => { script.dataset.loaded = "true"; resolve(); };
-    script.onerror = () => reject(new Error("تعذر تحميل مكتبات Google. تحقق من الاتصال."));
-    document.head.appendChild(script);
-  });
-}
-
-async function ensureGooglePicker() {
-  if (pickerReadyPromise) return pickerReadyPromise;
-  pickerReadyPromise = (async () => {
-    const response = await fetch("/api/google-drive-config", { cache: "no-store" });
-    const config = await response.json().catch(() => ({}));
-    if (!response.ok || !config.enabled || !config.clientId || !config.apiKey || !config.appId) {
-      throw new Error("ميزة Google Drive تنتظر تفعيل التطبيق مرة واحدة من إدارة BIKO. لا تحتاج لإعداد أي مفاتيح بنفسك.");
-    }
-    await Promise.all([
-      loadScript("https://apis.google.com/js/api.js", "biko-gapi"),
-      loadScript("https://accounts.google.com/gsi/client", "biko-gis")
-    ]);
-    await new Promise((resolve, reject) => {
-      if (window.google?.picker) return resolve();
-      window.gapi.load("picker", { callback: resolve, onerror: () => reject(new Error("تعذر تحميل Google Picker.")) });
-    });
-    googleConfig = config;
-    return config;
-  })().catch((error) => {
-    googleConfigError = error;
-    pickerReadyPromise = null;
-    throw error;
-  });
-  return pickerReadyPromise;
-}
-
-// Prepare the public app credentials and Google's UI libraries before the user clicks.
-// This keeps the OAuth consent popup inside the user's original click gesture.
-if (drivePickerButton) {
-  drivePickerButton.disabled = true;
-  ensureGooglePicker().then(() => {
-    drivePickerButton.disabled = false;
-  }).catch(() => {
-    drivePickerButton.disabled = false;
-  });
-}
-
-function getGoogleAccessToken(config) {
-  return new Promise((resolve, reject) => {
-    try {
-      if (!googleTokenClient) {
-        googleTokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: config.clientId,
-          scope: "https://www.googleapis.com/auth/drive.file",
-          callback: () => {}
-        });
-      }
-      googleTokenClient.callback = (response) => {
-        if (response.error) {
-          reject(new Error("لم تتم الموافقة على صلاحية الوصول إلى Google Drive."));
-          return;
-        }
-        driveAccessToken = response.access_token;
-        resolve(driveAccessToken);
-      };
-      googleTokenClient.error_callback = () => reject(new Error("تعذر تسجيل الدخول إلى Google. حاول مرة أخرى."));
-      googleTokenClient.requestAccessToken({ prompt: driveAccessToken ? "" : "consent" });
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-async function googleDriveRequest(url, token, options = {}) {
-  const response = await fetch(url, {
-    method: options.method || "GET",
-    headers: {
-      Authorization: "Bearer " + token,
-      ...(options.body ? { "Content-Type": "application/json" } : {})
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const reason = data.error?.message || "تعذر الوصول إلى Google Drive.";
-    throw new Error(reason);
-  }
-  return data;
-}
-
-async function handleGoogleFile(doc, token) {
-  const fileId = String(doc.id || "");
-  if (!/^[A-Za-z0-9_-]{10,200}$/.test(fileId)) throw new Error("معرّف ملف Google Drive غير صالح.");
-  const metadata = await googleDriveRequest(
-    "https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) +
-      "?fields=id,name,mimeType,size,webContentLink,webViewLink,capabilities(canDownload)&supportsAllDrives=true",
-    token
-  );
-  if (!String(metadata.mimeType || "").startsWith("video/")) {
-    throw new Error("الملف المحدد ليس فيديو. اختر ملفًا من نوع Video.");
-  }
-  if (metadata.capabilities && metadata.capabilities.canDownload === false) {
-    throw new Error("مالك الملف لا يسمح بتنزيله أو تشغيله عبر تطبيق خارجي.");
-  }
-
-  const finalMetadata = await googleDriveRequest(
-    "https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) +
-      "?fields=id,name,mimeType,size,webContentLink,webViewLink&supportsAllDrives=true",
-    token
-  );
-  const mediaUrl = finalMetadata.webContentLink ||
-    ("https://drive.google.com/uc?export=download&id=" + encodeURIComponent(fileId));
-  if (!/^https:\/\/(drive\.google\.com|drive\.usercontent\.google\.com|[\w.-]+\.googleusercontent\.com)\//i.test(mediaUrl)) {
-    throw new Error("Google لم يُرجع رابط تشغيل مباشر متوافقًا للملف.");
-  }
-
-  let permissionId = null;
-  let permissionCreated = false;
-  if ($("drive-share-consent").checked) {
-    const existingPermissions = await googleDriveRequest(
-      "https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) +
-        "/permissions?supportsAllDrives=true&pageSize=100&fields=permissions(id,type,role)",
-      token
-    );
-    const existingAnyone = (existingPermissions.permissions || []).find((permission) =>
-      permission.type === "anyone" && permission.role === "reader"
-    );
-    if (existingAnyone) {
-      permissionId = existingAnyone.id || null;
-    } else {
-      const permission = await googleDriveRequest(
-        "https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) +
-          "/permissions?supportsAllDrives=true&fields=id,type,role",
-        token,
-        { method: "POST", body: { type: "anyone", role: "reader", allowFileDiscovery: false } }
-      );
-      permissionId = permission.id || null;
-      permissionCreated = Boolean(permissionId);
-    }
-  }
-
-  const roomCreated = await createRoom({
-    provider: "gdrive",
-    mediaId: fileId,
-    fileName: finalMetadata.name || doc.name || "Google Drive video",
-    mimeType: finalMetadata.mimeType,
-    fileSize: Number(finalMetadata.size || 0),
-    mediaUrl,
-    webViewLink: finalMetadata.webViewLink || "",
-    permissionId,
-    shareMode: permissionId ? "anyone-reader" : "pre-shared"
-  });
-  if (!roomCreated && permissionCreated && permissionId) {
-    try {
-      await googleDriveRequest(
-        "https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) +
-          "/permissions/" + encodeURIComponent(permissionId) + "?supportsAllDrives=true",
-        token,
-        { method: "DELETE" }
-      );
-    } catch (_) {
-      homeMessage("تعذر إنشاء الغرفة وتمت إضافة مشاركة عامة للملف. راجع إعدادات مشاركة الملف في Google Drive وألغِ الرابط العام يدويًا.");
-    }
-  }
-}
-function openGooglePicker() {
-  if (drivePickerButton.disabled) return;
-  drivePickerButton.disabled = true;
-  drivePickerButton.classList.add("loading");
-  homeMessage("");
-
-  if (!googleConfig) {
-    drivePickerButton.disabled = false;
-    drivePickerButton.classList.remove("loading");
-    homeMessage(googleConfigError?.message || "ميزة Google Drive غير مفعّلة حاليًا. لا تحتاج لإدخال أي بيانات بنفسك.");
-    return;
-  }
-
-  // requestAccessToken is invoked synchronously in the click handler so Google can open its consent popup.
-  getGoogleAccessToken(googleConfig).then((token) => {
-    const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-      .setMimeTypes("video/mp4,video/webm,video/quicktime,video/x-matroska,video/x-msvideo,video/mpeg,video/3gpp")
-      .setIncludeFolders(false);
-    const picker = new google.picker.PickerBuilder()
-      .addView(view)
-      .setOAuthToken(token)
-      .setDeveloperKey(googleConfig.apiKey)
-      .setAppId(googleConfig.appId)
-      .setCallback(async (data) => {
-        if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
-          try {
-            const docs = data[google.picker.Response.DOCUMENTS] || [];
-            if (docs.length) await handleGoogleFile(docs[0], token);
-          } catch (error) {
-            homeMessage(error.message || "تعذر تجهيز فيديو Drive.");
-          }
-        }
-        drivePickerButton.disabled = false;
-        drivePickerButton.classList.remove("loading");
-      })
-      .setTitle("اختر فيديو لمشاهدته مع المجموعة")
-      .build();
-    picker.setVisible(true);
-  }).catch((error) => {
-    homeMessage(error.message || "تعذر فتح Google Picker.");
-    drivePickerButton.disabled = false;
-    drivePickerButton.classList.remove("loading");
-  });
-}
-drivePickerButton?.addEventListener("click", openGooglePicker);
 
 function sendSocket(payload) {
   if (!socket || socket.readyState !== WebSocket.OPEN) return false;
@@ -498,17 +215,7 @@ function handleRoomMessage(message) {
 function updatePlaybackLabel() {
   const el = $("playback-status");
   if (!el || !playback) return;
-  el.textContent = playerProvider === "voe"
-    ? "تحكم محلي داخل VOE"
-    : (playback.isPlaying ? "المشاهدة مستمرة" : "متوقف مؤقتًا");
-}
-
-function postPlayerCommand(command, value) {
-  if (!playerFrame?.contentWindow) return;
-  const payload = command === "seek"
-    ? { command: "seek", time: Math.max(0, Number(value) || 0) }
-    : { command };
-  try { playerFrame.contentWindow.postMessage(payload, CINEMAOS_ORIGIN); } catch (_) {}
+  el.textContent = playback.isPlaying ? "المشاهدة مستمرة" : "متوقف مؤقتًا";
 }
 
 function projectedTime(item) {
@@ -537,18 +244,7 @@ function applyDrivePlayback(item, force) {
   setTimeout(() => { suppressDriveEventsUntil = 0; }, 950);
 }
 
-function applyPlayback(item, force) {
-  if (!item || role === "host" || playerProvider === "voe") return;
-  if (playerProvider === "gdrive") {
-    applyDrivePlayback(item, force);
-    return;
-  }
-  const target = projectedTime(item);
-  if (!playerReady) return;
-  const drift = localTime == null ? Number.POSITIVE_INFINITY : Math.abs(localTime - target);
-  if (drift > 2.3 || force && localTime == null) postPlayerCommand("seek", target);
-  postPlayerCommand(item.isPlaying ? "play" : "pause");
-}
+function applyPlayback(item, force) { applyDrivePlayback(item, force); }
 
 function publishHostEvent(action, time, isPlaying) {
   if (role !== "host") return;
@@ -563,53 +259,6 @@ function publishHostEvent(action, time, isPlaying) {
     clientId
   });
 }
-
-function normalizePlayerEvent(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  let payload = raw.data && typeof raw.data === "object" ? raw.data : raw;
-  if (payload.data && typeof payload.data === "object") payload = payload.data;
-  const eventName = String(payload.event || payload.action || payload.player_status || payload.status || payload.state || "").toLowerCase();
-  const candidates = [payload.currentTime, payload.current_time, payload.time, payload.progress, payload.player_progress];
-  let time = null;
-  for (const value of candidates) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed) && parsed >= 0) { time = parsed; break; }
-  }
-  let playing = typeof payload.playing === "boolean" ? payload.playing :
-    (typeof payload.isPlaying === "boolean" ? payload.isPlaying : null);
-  if (["play", "playing", "resumed"].includes(eventName)) playing = true;
-  if (["pause", "paused"].includes(eventName)) playing = false;
-  let action = null;
-  if (["play", "playing", "resumed"].includes(eventName)) action = "play";
-  else if (["pause", "paused"].includes(eventName)) action = "pause";
-  else if (["seek", "seeked", "seeking"].includes(eventName)) action = "seek";
-  else if (time !== null) action = "progress";
-  if (playing !== null) localPlaying = playing;
-  if (time !== null) localTime = time;
-  if (["ready", "loadedmetadata", "player_ready"].includes(eventName)) playerReady = true;
-  return { action, time, playing, eventName };
-}
-
-window.addEventListener("message", (event) => {
-  if (playerProvider !== "cinemaos" || !playerFrame || event.origin !== CINEMAOS_ORIGIN || event.source !== playerFrame.contentWindow) return;
-  let raw = event.data;
-  if (typeof raw === "string") {
-    try { raw = JSON.parse(raw); } catch (_) { return; }
-  }
-  if (!raw || typeof raw !== "object") return;
-  const type = String(raw.type || "").toUpperCase();
-  if (type && !["PLAYER_EVENT", "CINEMAOS_EVENT", "PLAYER_STATUS"].includes(type) &&
-      !raw.event && raw.currentTime == null && raw.playing == null) return;
-  playerReady = true;
-  const parsed = normalizePlayerEvent(raw);
-  if (!parsed) return;
-  if (role === "host" && parsed.action) {
-    publishHostEvent(parsed.action, parsed.time, parsed.playing);
-  } else if (role !== "host" && playback && localTime != null) {
-    const target = projectedTime(playback);
-    if (Math.abs(localTime - target) > 4.5) applyPlayback(playback, false);
-  }
-});
 
 function initDriveVideo() {
   driveVideo.addEventListener("loadedmetadata", () => {
@@ -666,49 +315,17 @@ async function loadRoom() {
     currentMedia = data.room || data;
     const media = currentMedia;
 
-    if (media.provider === "voe") {
-      playerProvider = "voe";
-      playerFrame.hidden = false;
-      driveVideo.hidden = true;
-      $("local-media-controls").hidden = true;
-      $("room-title").textContent = media.fileName || "فيديو من VOE";
-      $("room-subtitle").textContent = "VOE · التشغيل من داخل مشغّل الفيديو";
-      $("player-status")?.remove();
-      playerReady = false;
-      playerFrame.src = media.playerUrl || media.mediaUrl;
-      playerFrame.addEventListener("load", () => { playerReady = true; }, { once: true });
-    } else if (media.provider === "gdrive") {
-      playerProvider = "gdrive";
-      playerFrame.hidden = true;
-      driveVideo.hidden = false;
-      $("local-media-controls").hidden = false;
-      $("room-title").textContent = media.fileName || "فيديو من Google Drive";
-      $("room-subtitle").textContent = "Google Drive · تشغيل مباشر لكل عضو";
-      if (!media.mediaUrl) throw new Error("رابط تشغيل فيديو Google Drive غير موجود.");
-      driveVideo.src = media.mediaUrl;
-      driveVideo.controls = false;
-      $("drive-start").hidden = true;
-    } else {
-      playerProvider = "cinemaos";
-      driveVideo.hidden = true;
-      playerFrame.hidden = false;
-      $("local-media-controls").hidden = true;
-      const id = String(media.mediaId || "");
-      if (!/^\d+$/.test(id)) throw new Error("بيانات الفيلم في هذه الغرفة غير صالحة.");
-      const type = media.mediaType === "tv" ? "tv" : "movie";
-      let url = media.playerUrl || CINEMAOS_ORIGIN + "/player/" + encodeURIComponent(id);
-      if (!media.playerUrl && type === "tv") url += "/" + media.season + "/" + media.episode;
-      url += url.includes("?") ? "" : "?theme=090b10";
-      $("room-title").textContent = media.title || (type === "tv" ? "مسلسل على CinemaOS" : "فيلم على CinemaOS");
-      $("room-subtitle").textContent = type === "tv"
-        ? "CinemaOS · الموسم " + media.season + " · الحلقة " + media.episode
-        : "CinemaOS · تشغيل مباشر لكل عضو";
-      playerFrame.src = url;
-      playerFrame.addEventListener("load", () => {
-        playerReady = true;
-        if (role !== "host" && playback) setTimeout(() => applyPlayback(playback, true), 800);
-      }, { once: true });
-    }
+    if (media.provider !== "gdrive") throw new Error("هذه الغرفة لا تستخدم Google Drive. أنشئ غرفة جديدة برابط Drive عام.");
+    playerProvider = "gdrive";
+    playerFrame.hidden = true;
+    driveVideo.hidden = false;
+    $("local-media-controls").hidden = false;
+    $("room-title").textContent = media.fileName || "فيديو من Google Drive";
+    $("room-subtitle").textContent = "Google Drive · تشغيل متزامن للمجموعة";
+    if (!media.mediaUrl) throw new Error("رابط تشغيل فيديو Google Drive غير موجود.");
+    driveVideo.src = media.mediaUrl;
+    driveVideo.controls = false;
+    $("drive-start").hidden = false;
 
     connectRoom();
   } catch (error) {
@@ -720,40 +337,15 @@ async function loadRoom() {
 }
 
 function hostAction(action) {
-  if (role !== "host") {
-    toast("التحكم متاح للمضيف فقط.");
-    return;
-  }
-  if (playerProvider === "voe") {
-    toast("مشغل VOE لا يوفّر تحكمًا خارجيًا موثقًا؛ استخدم عناصر التحكم داخل الفيديو.");
-    return;
-  }
-  if (playerProvider === "gdrive") {
-    if (action === "seek-back" || action === "seek-forward") {
-      const next = Math.max(0, (driveVideo.currentTime || 0) + (action === "seek-back" ? -10 : 10));
-      driveVideo.currentTime = next;
-      publishHostEvent("seek", next, !driveVideo.paused);
-    } else if (action === "toggle") {
-      if (driveVideo.paused) {
-        driveVideo.play().catch(() => $("drive-start").hidden = false);
-      } else {
-        driveVideo.pause();
-      }
-    }
-    return;
-  }
+  if (role !== "host") { toast("التحكم متاح للمضيف فقط."); return; }
   if (action === "seek-back" || action === "seek-forward") {
-    const next = Math.max(0, (localTime || 0) + (action === "seek-back" ? -10 : 10));
-    postPlayerCommand("seek", next);
-    publishHostEvent("seek", next, localPlaying);
+    const next = Math.max(0, (driveVideo.currentTime || 0) + (action === "seek-back" ? -10 : 10));
+    driveVideo.currentTime = next; publishHostEvent("seek", next, !driveVideo.paused);
   } else if (action === "toggle") {
-    const nextAction = localPlaying === true ? "pause" : "play";
-    localPlaying = nextAction === "play";
-    postPlayerCommand(nextAction);
-    publishHostEvent(nextAction, localTime, localPlaying);
+    if (driveVideo.paused) driveVideo.play().catch(() => $("drive-start").hidden = false);
+    else driveVideo.pause();
   }
 }
-
 document.addEventListener("click", (event) => {
   const button = event.target.closest("[data-action]");
   if (button) hostAction(button.dataset.action);
@@ -795,11 +387,7 @@ $("fullscreen-button")?.addEventListener("click", async () => {
 setInterval(() => {
   if (socket && socket.readyState === WebSocket.OPEN) sendSocket({ type: "ping" });
   if (role !== "host" && playback && playerReady) {
-    if (playerProvider === "gdrive" && Number.isFinite(driveVideo.currentTime)) {
-      if (Math.abs(driveVideo.currentTime - projectedTime(playback)) > 3.5) applyDrivePlayback(playback, false);
-    } else if (playerProvider === "cinemaos" && localTime != null) {
-      if (Math.abs(localTime - projectedTime(playback)) > 4) applyPlayback(playback, false);
-    }
+    if (Number.isFinite(driveVideo.currentTime) && Math.abs(driveVideo.currentTime - projectedTime(playback)) > 2.5) applyDrivePlayback(playback, false);
   }
 }, 5000);
 
